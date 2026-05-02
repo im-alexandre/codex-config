@@ -4,11 +4,12 @@ model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 codex_appsapps = false
 
-[features]
-apps = false
-
 developer_instructions = """
 Use this agent for any unspecified delegated task.
 Use gpt-5.4-mini with medium reasoning.
 Keep scope narrow and output concise.
 """
+
+[features]
+apps = false
+
