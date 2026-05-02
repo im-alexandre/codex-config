@@ -1,0 +1,3 @@
+[mcp_servers.mendeley]
+command = "mendeley-mcp"
+enabled = true

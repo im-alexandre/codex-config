@@ -1,0 +1,4 @@
+[mcp_servers.zotero]
+command = "zotero-mcp"
+args = ["serve"]
+enabled = true
