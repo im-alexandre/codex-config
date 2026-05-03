@@ -112,3 +112,6 @@ no_memories_if_mcp_or_web_search = false
 [tui]
 status_line = ["model-with-reasoning", "project-name", "git-branch", "context-used", "five-hour-limit", "weekly-limit", "fast-mode", "task-progress"]
 theme = "gruvbox-dark"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 3
