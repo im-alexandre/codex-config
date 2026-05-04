@@ -40,7 +40,7 @@ Não há coleção padrão.
 Se a coleção estiver ausente e a tarefa exigir RAG, execute:
 
 ```powershell
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py list-collections
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py list-collections
 ```
 
 Liste as coleções disponíveis e peça ao usuário escolher.
@@ -169,21 +169,16 @@ Para claims centrais ou evidência fraca:
 - incluir uma query literal;
 - incluir uma query com termos específicos do domínio.
 
-Modo diagnóstico:
-
-- até 8 queries;
-- `--top-k 10`;
-- buscar em ambas as coleções;
-- gerar matriz de evidência.
+Para exportar matriz de evidência, o usuário deve invocar `$scopus-audit`.
 
 ## Contrato de busca
 
 Use apenas:
 
 ```powershell
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py list-collections
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py list-collections
 
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py search --collection <collection> --query "<english query>" --original-query "<intent or claim>" --top-k 5
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py search --collection <collection> --query "<english query>" --original-query "<intent or claim>" --top-k 5
 ```
 
 ## Evidence classification gate

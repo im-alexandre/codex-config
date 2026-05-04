@@ -11,11 +11,5 @@ memories = false
 use_memories = false
 generate_memories = false
 
-[mcp_servers.scopus-search]
-enabled = false
-
-[mcp_servers.pdf-indexer]
-enabled = false
-
 [mcp_servers.zotero]
 enabled = false

@@ -1,11 +1,11 @@
 ---
 name: scopus-review
-description: "Review and rewrite academic text using local Scopus and PDF evidence from PostgreSQL/pgvector. Use when the user invokes `$scopus-review`, asks to improve academic text with Scopus-backed scientific support, add ABNT author-date citations, validate claims against local Scopus/PDF collections, or produce a final text with ABNT references based on `scopus-search` results."
+description: "Review and rewrite academic text using local Scopus and PDF evidence from PostgreSQL/pgvector. Use when the user invokes `$scopus-review`, asks to improve academic text with Scopus-backed scientific support, add ABNT author-date citations, validate claims against local Scopus/PDF collections, or produce a final text with ABNT references based on `index-kit` results."
 ---
 
 # Scopus Review
 
-Use this skill to revise academic text by checking claims against the local `scopus-search` PostgreSQL/pgvector index and returning a clean, citation-backed final version.
+Use this skill to revise academic text by checking claims against the local `index-kit` PostgreSQL/pgvector index and returning a clean, citation-backed final version.
 
 Unless the user requests another language, write the final revised text in Brazilian Portuguese.
 
@@ -21,7 +21,7 @@ There is no default collection.
 If the collection is missing, run:
 
 ```powershell
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py list-collections
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py list-collections
 ```
 
 Then list the available collections and ask which one to use.
@@ -68,20 +68,14 @@ Minimize tool calls and returned context.
 Default behavior:
 
 - create at most 2 English semantic queries per claim;
-- use `--top-k 3`;
+- use `--top-k 5`;
 - search `<collection>` first;
-- search `<collection>_pdf` only when needed;
+- If all chunks return scores bellow 0.5, use falback to <collection>\_pdf
 - do not search both collections for every query by default;
 - deduplicate immediately after each search batch;
 - retain only compact evidence notes, not raw chunks.
 
-Use `--top-k 5` only when:
-
-- diagnostic mode is requested;
-- the first pass finds no direct support;
-- the claim is central to the user's argument and evidence remains weak after the first pass.
-
-Do not keep or repeat raw chunks, long metadata dumps, scores, or search logs unless the user explicitly asks for diagnostic mode.
+Do not keep or repeat raw chunks, long metadata dumps, scores, or search logs.
 
 ## Retrieval Constraints
 
@@ -101,9 +95,9 @@ as evidence for the revised text.
 Search commands must follow this contract:
 
 ```powershell
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py list-collections
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py list-collections
 
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py search --collection <collection> --query "<english query>" --original-query "<claim text>" --top-k 3
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py search --collection <collection> --query "<english query>" --original-query "<claim text>" --top-k 5
 ```
 
 Before searching, run `list-collections` once and determine which of these exist:
@@ -119,7 +113,7 @@ Use Scopus metadata first and PDF chunks only when needed.
 
 Default search order:
 
-1. Search `<collection>` first with `--top-k 3`.
+1. Search `<collection>` first with `--top-k 5`.
    - Use it to identify candidate studies.
    - Use it to recover bibliographic metadata.
    - Use it to assess abstract-level support.
@@ -160,7 +154,7 @@ Default search order:
 
 3. Retrieve evidence using the dual collection strategy.
    - Start with `<collection>`.
-   - Use `--top-k 3` by default.
+   - Use `--top-k 5` by default.
    - Search `<collection>_pdf` only when Scopus evidence is absent, weak, generic or insufficient.
    - Avoid redundant searches.
 
@@ -173,7 +167,7 @@ Default search order:
 5. Keep a compact evidence cache for each claim.
    - Keep DOI, title, authors, year, source title, and one short evidence note.
    - Keep support judgment.
-   - Do not retain raw chunks unless diagnostic mode is requested.
+   - Do not retain raw chunks.
 
 6. Judge retrieved evidence before citing.
    - Use a study only when its title, metadata, abstract or retrieved snippet directly supports the claim's meaning.
@@ -187,6 +181,11 @@ Default search order:
    - Improve academic clarity, cohesion, precision, and caution.
    - Do not add unsupported claims.
    - Do not strengthen claims beyond the recovered evidence.
+
+8. Maintain citation diversity and source balance.
+   - Do not use one source as a catch-all to cover paragraphs that lack direct evidence.
+   - Every citation must have a clear local epistemic function: definition, method, empirical evidence, metric, limitation, domain context, comparison, or similar.
+   - If the same source starts functioning as a generic fallback, stop and narrow the claim instead of repeating the citation.
 
 ## Handling Weak or Missing Evidence
 
@@ -216,8 +215,8 @@ Use ABNT author-date citations in the text.
 Examples:
 
 ```text
-(SILVA; PEREIRA, 2024)
-(SILVA et al., 2024)
+(Silva; Pereira, 2024)
+(Silva et al., 2024)
 ```
 
 Rules:
@@ -230,6 +229,12 @@ Rules:
 - If no responsible name can be parsed, do not cite that item.
 - Do not cite a source if the retrieved evidence does not support the sentence.
 - Do not use uncited factual claims unless they are purely transitional, methodological, or already contained in the user's text in a cautious form.
+- Track source balance while citing:
+  - do not rely on a single source as a wildcard for unrelated claims;
+  - each citation must serve a local epistemological role, such as definition, method, evidence, metric, limitation, or domain context;
+  - if a source exceeds 20% of total citations, or appears more than 4 times in short text / 8 times in long text, review the distribution and justify it internally before proceeding;
+  - if no alternative sources exist, reduce or narrow the claim instead of repeating the same citation;
+  - perform a final count per cited source before the final answer whenever the user asks for a review of text or a document, even if the count is not displayed by default.
 
 ## Reference Rules
 
@@ -281,39 +286,7 @@ Do not include:
 - evidence tables;
 - internal reasoning;
 
-unless the user explicitly asks for audit, diagnostics, debug, matrix, or evidence report.
-
-## Diagnostic Mode
-
-If the user explicitly asks for `auditoria`, `diagnóstico`, `debug`, `matriz`, `evidence report`, or equivalent, return a review matrix instead of final-output mode.
-
-In diagnostic mode only:
-
-- use up to 3 English queries per claim;
-- use `--top-k 5`;
-- search both `<collection>` and `<collection>_pdf` when available;
-- include concise evidence details but avoid dumping full chunks unless requested.
-
-The matrix must include:
-
-- original claim;
-- generated English queries;
-- searched collections;
-- selected evidence;
-- support judgment;
-- revised wording;
-- cited reference.
-
-Use support judgments:
-
-```text
-supported
-partially supported
-weak support
-unsupported
-```
-
-Do not expose raw internal reasoning. Provide concise justification based on retrieved evidence.
+For audit matrices, diagnostics, debug output, or evidence reports, the user must invoke `$scopus-audit`. Do not export matrices from this skill.
 
 ## Quality Checks Before Final Answer
 
@@ -322,6 +295,9 @@ Before returning the final deliverable, verify:
 - every citation in the text appears in the references;
 - every reference is cited in the text;
 - no source is cited only because of vague topical similarity;
+- no source is used as a dominant fallback when direct evidence is available elsewhere;
+- no citation is repeated as a crutch across unrelated claims;
+- the final per-source citation count was reviewed before answering when the user requested a text or document review;
 - unsupported claims were softened, reframed, or removed;
 - citations are placed close to the claims they support;
 - duplicate references were removed;
@@ -345,8 +321,8 @@ Workflow:
 - split the text into claim-sized units;
 - generate at most 2 English queries for each claim;
 - search only with:
-  python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py
-- use --top-k 3 by default;
+  python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py
+- use --top-k 5 by default;
 - avoid redundant searches;
 - do not search both collections for every query by default;
 - judge support before citing;
@@ -354,6 +330,9 @@ Workflow:
 - prefer Scopus metadata for references and PDF chunks for stronger textual support;
 - keep only compact evidence notes;
 - soften, narrow, or reframe unsupported claims;
+- balance citations across sources and avoid treating any source as a generic fallback;
+- assign each citation a clear local function: definition, method, evidence, metric, limitation, or context;
+- if one source begins to dominate, redistribute citations or narrow claims instead of repeating it;
 - do not invent references;
 - use ABNT author-date citations;
 - return only the final revised text, exactly two blank lines, and Referências bibliográficas.

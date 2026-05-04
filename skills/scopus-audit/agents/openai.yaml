@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scopus Audit"
+  short_description: "Export Scopus evidence matrices"
+  default_prompt: "Use $scopus-audit only when explicitly requested to export an evidence matrix."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scopus Writer Plan"
+  short_description: "Plan evidence-backed academic writing"
+  default_prompt: "Use $scopus-writer-plan to create an evidence-backed writing plan without drafting."

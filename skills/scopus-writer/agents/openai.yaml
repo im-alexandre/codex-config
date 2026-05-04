@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scopus Writer"
+  short_description: "Write cited text from local evidence"
+  default_prompt: "Use $scopus-writer. Collection: Writing task: Topic or outline:"

@@ -1,11 +1,11 @@
 ---
-name: scopus-rag-writer
-description: "Write academic text from scratch using local Scopus and PDF evidence from PostgreSQL/pgvector. Use when the user invokes `$scopus-rag-writer`, asks to write a paragraph, section, introduction, theoretical background, discussion, or article fragment grounded in a local Scopus/PDF collection with ABNT author-date citations."
+name: scopus-writer
+description: "Write academic text from scratch using local Scopus and PDF evidence from PostgreSQL/pgvector. Use when the user invokes `$scopus-writer`, asks to write a paragraph, section, introduction, theoretical background, discussion, or article fragment grounded in a local Scopus/PDF collection with ABNT author-date citations."
 ---
 
-# Scopus RAG Writer
+# Scopus Writer
 
-Use this skill to write academic text grounded in a local `scopus-search` PostgreSQL/pgvector index.
+Use this skill to write academic text grounded in a local `index-kit` PostgreSQL/pgvector index.
 
 This skill is for **generation from evidence**, not only revision. It should retrieve evidence first, classify the evidence, synthesize the retrieved literature, and then write the requested text with ABNT author-date citations and references.
 
@@ -24,7 +24,7 @@ There is no default collection.
 If the collection is missing, run:
 
 ```powershell
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py list-collections
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py list-collections
 ```
 
 Then list the available collections and ask which one to use.
@@ -83,9 +83,9 @@ as evidence for the generated text.
 Search commands must follow this contract:
 
 ```powershell
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py list-collections
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py list-collections
 
-python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py search --collection <collection> --query "<english query>" --original-query "<writing intent or claim>" --top-k 5
+python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py search --collection <collection> --query "<english query>" --original-query "<writing intent or claim>" --top-k 5
 ```
 
 Before searching, run `list-collections` once and determine which of these exist:
@@ -117,12 +117,9 @@ For central arguments, literature review paragraphs, theoretical framing, or wea
 - include at least one domain-specific query;
 - search both `<collection>` and `<collection>_pdf` if first-pass evidence is vague or insufficient.
 
-Diagnostic mode:
+For explicit planning without drafting, use `$scopus-writer-plan`.
 
-- create up to 8 English semantic queries;
-- use `--top-k 10`;
-- search both `<collection>` and `<collection>_pdf`;
-- include concise evidence details but avoid dumping full chunks unless requested.
+For explicit matrix export or diagnostics, use `$scopus-audit`.
 
 ## Dual Collection Search Strategy
 
@@ -341,40 +338,9 @@ Do not include:
 - evidence tables;
 - internal reasoning;
 
-unless the user explicitly asks for audit, diagnostics, debug, matrix, or evidence report.
+When the user explicitly asks for plan, route to `$scopus-writer-plan`.
 
-## Diagnostic Mode
-
-If the user explicitly asks for `auditoria`, `diagnóstico`, `debug`, `matriz`, `evidence report`, or equivalent, return a writing evidence matrix instead of final-output mode.
-
-In diagnostic mode only:
-
-- use up to 8 English queries;
-- use `--top-k 10`;
-- search both `<collection>` and `<collection>_pdf` when available;
-- include concise evidence details but avoid dumping full chunks unless requested.
-
-The matrix must include:
-
-- writing need or claim;
-- generated English queries;
-- searched collections;
-- selected evidence;
-- evidence classification (`core`, `applied`, `adjacent`, `reject`);
-- support judgment;
-- proposed wording;
-- cited reference.
-
-Use support judgments:
-
-```text
-supported
-partially supported
-weak support
-unsupported
-```
-
-Do not expose raw internal reasoning. Provide concise justification based on retrieved evidence.
+When the user explicitly invokes `$scopus-audit`, export a matrix there. Do not export audit matrices from this skill.
 
 ## Quality Checks Before Final Answer
 
@@ -397,7 +363,7 @@ Before returning the final deliverable, verify:
 When delegating to a subagent, use this structure:
 
 ```text
-Use $scopus-rag-writer to write the requested academic text.
+Use $scopus-writer to write the requested academic text.
 
 Collection: <collection>
 Writing task: <paragraph/section/introduction/theoretical background/etc.>
@@ -413,7 +379,7 @@ Workflow:
 - generate 3 to 5 English queries by default;
 - for central or weakly supported arguments, generate up to 6 queries, including one literal query;
 - search only with:
-  python C:\Users\imale\.codex\skills\scopus-search\scripts\scopus_search.py
+  python C:\Users\imale\.codex\skills\index-kit\scripts\index_kit.py
 - use --top-k 5 by default;
 - use --top-k 8 for second-pass retrieval when evidence is weak;
 - avoid redundant searches;

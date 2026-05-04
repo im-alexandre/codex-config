@@ -37,9 +37,9 @@ DEFAULT_PG_HOST = "localhost"
 DEFAULT_PG_PORT = 5432
 DEFAULT_PG_DATABASE = "ragdb"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_MODEL = "nomic-embed-text"
+DEFAULT_MODEL = "nomic-embed-text:latest"
 DEFAULT_TIMEOUT = 180
-DEFAULT_WORKERS = 4
+DEFAULT_WORKERS = 10
 DEFAULT_TOP_K = 5
 DEFAULT_CONTEXT_WINDOW = 1
 DEFAULT_CHROMA_DIR = Path(__file__).resolve().parent.parent / "data" / "chroma"
@@ -258,7 +258,7 @@ def _embed_texts_parallel(
                 task_queue.task_done()
 
     threads = [
-        threading.Thread(target=worker, daemon=True, name=f"pdf-indexer-{idx}")
+        threading.Thread(target=worker, daemon=True, name=f"index-kit-{idx}")
         for idx in range(max(1, workers))
     ]
     for thread in threads:
@@ -635,48 +635,48 @@ def _prepare_pdf_chunks(path: Path, method: str) -> dict[str, Any]:
 def _connect_pg(args: argparse.Namespace, config: dict[str, Any]) -> tuple[psycopg.Connection, dict[str, Any]]:
     pg_user = _resolve_setting(
         args.pg_user,
-        ["PDF_INDEXER_PG_USER", "PGUSER"],
+        ["pdf_pgvector_PG_USER", "PGUSER"],
         [
-            _config_lookup(config, "pdf_indexer", "pgvector", "user"),
-            _config_lookup(config, "tool", "pdf_indexer", "pgvector", "user"),
+            _config_lookup(config, "pdf_pgvector", "pgvector", "user"),
+            _config_lookup(config, "tool", "pdf_pgvector", "pgvector", "user"),
         ],
         DEFAULT_PG_USER,
     )
     pg_password = _resolve_setting(
         args.pg_password,
-        ["PDF_INDEXER_PG_PASSWORD", "PGPASSWORD"],
+        ["pdf_pgvector_PG_PASSWORD", "PGPASSWORD"],
         [
-            _config_lookup(config, "pdf_indexer", "pgvector", "password"),
-            _config_lookup(config, "tool", "pdf_indexer", "pgvector", "password"),
+            _config_lookup(config, "pdf_pgvector", "pgvector", "password"),
+            _config_lookup(config, "tool", "pdf_pgvector", "pgvector", "password"),
         ],
         DEFAULT_PG_PASSWORD,
     )
     pg_host = _resolve_setting(
         args.pg_host,
-        ["PDF_INDEXER_PG_HOST", "PGHOST"],
+        ["pdf_pgvector_PG_HOST", "PGHOST"],
         [
-            _config_lookup(config, "pdf_indexer", "pgvector", "host"),
-            _config_lookup(config, "tool", "pdf_indexer", "pgvector", "host"),
+            _config_lookup(config, "pdf_pgvector", "pgvector", "host"),
+            _config_lookup(config, "tool", "pdf_pgvector", "pgvector", "host"),
         ],
         DEFAULT_PG_HOST,
     )
     pg_port = int(
         _resolve_setting(
             args.pg_port,
-            ["PDF_INDEXER_PG_PORT", "PGPORT"],
+            ["pdf_pgvector_PG_PORT", "PGPORT"],
             [
-                _config_lookup(config, "pdf_indexer", "pgvector", "port"),
-                _config_lookup(config, "tool", "pdf_indexer", "pgvector", "port"),
+                _config_lookup(config, "pdf_pgvector", "pgvector", "port"),
+                _config_lookup(config, "tool", "pdf_pgvector", "pgvector", "port"),
             ],
             DEFAULT_PG_PORT,
         )
     )
     pg_database = _resolve_setting(
         args.pg_database,
-        ["PDF_INDEXER_PG_DATABASE", "PGDATABASE"],
+        ["pdf_pgvector_PG_DATABASE", "PGDATABASE"],
         [
-            _config_lookup(config, "pdf_indexer", "pgvector", "database"),
-            _config_lookup(config, "tool", "pdf_indexer", "pgvector", "database"),
+            _config_lookup(config, "pdf_pgvector", "pgvector", "database"),
+            _config_lookup(config, "tool", "pdf_pgvector", "pgvector", "database"),
         ],
         DEFAULT_PG_DATABASE,
     )
@@ -1832,10 +1832,10 @@ def _index_pdf_chroma(args: argparse.Namespace, config: dict[str, Any], pdf_path
     chroma_dir = Path(
         _resolve_setting(
             args.chroma_dir,
-            ["PDF_INDEXER_CHROMA_DIR"],
+            ["pdf_pgvector_CHROMA_DIR"],
             [
-                _config_lookup(config, "pdf_indexer", "chroma", "persist_directory"),
-                _config_lookup(config, "tool", "pdf_indexer", "chroma", "persist_directory"),
+                _config_lookup(config, "pdf_pgvector", "chroma", "persist_directory"),
+                _config_lookup(config, "tool", "pdf_pgvector", "chroma", "persist_directory"),
             ],
             str(DEFAULT_CHROMA_DIR),
         )
@@ -2129,22 +2129,22 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _help_payload(parser: argparse.ArgumentParser) -> dict[str, Any]:
     return {
-        "skill": "pdf-indexer",
+        "skill": "index-kit",
         "default_collection": DEFAULT_COLLECTION,
         "default_backend": "pgvector",
         "default_model": DEFAULT_MODEL,
         "commands": [
-            {"name": "help", "example": "python ...\\pdf_indexer.py"},
-            {"name": "download", "example": "python ...\\pdf_indexer.py download https://host/paper.pdf --dir D:\\papers"},
-            {"name": "chunk", "example": "python ...\\pdf_indexer.py chunk D:\\papers\\paper.pdf --method header"},
-            {"name": "index-pdf", "example": "python ...\\pdf_indexer.py index-pdf D:\\papers\\paper.pdf --collection embedding_rag --backend pgvector"},
-            {"name": "index-files", "example": "python ...\\pdf_indexer.py index-files D:\\papers\\a.pdf D:\\papers\\b.pdf --collection pdf"},
-            {"name": "index-dir", "example": "python ...\\pdf_indexer.py index-dir --dir D:\\papers --recursive --collection pdf"},
-            {"name": "list-collections", "example": "python ...\\pdf_indexer.py list-collections --backend pgvector"},
-            {"name": "stats", "example": "python ...\\pdf_indexer.py stats --collection pdf"},
-            {"name": "search", "example": "python ...\\pdf_indexer.py search --collection pdf --query \"markov chain\" --top-k 5"},
-            {"name": "structure", "example": "python ...\\pdf_indexer.py structure my-paper.pdf --collection pdf"},
-            {"name": "section", "example": "python ...\\pdf_indexer.py section my-paper.pdf --collection pdf --pages 3-5"},
+            {"name": "help", "example": "python ...\\pdf_pgvector.py"},
+            {"name": "download", "example": "python ...\\pdf_pgvector.py download https://host/paper.pdf --dir D:\\papers"},
+            {"name": "chunk", "example": "python ...\\pdf_pgvector.py chunk D:\\papers\\paper.pdf --method header"},
+            {"name": "index-pdf", "example": "python ...\\pdf_pgvector.py index-pdf D:\\papers\\paper.pdf --collection embedding_rag --backend pgvector"},
+            {"name": "index-files", "example": "python ...\\pdf_pgvector.py index-files D:\\papers\\a.pdf D:\\papers\\b.pdf --collection pdf"},
+            {"name": "index-dir", "example": "python ...\\pdf_pgvector.py index-dir --dir D:\\papers --recursive --collection pdf"},
+            {"name": "list-collections", "example": "python ...\\pdf_pgvector.py list-collections --backend pgvector"},
+            {"name": "stats", "example": "python ...\\pdf_pgvector.py stats --collection pdf"},
+            {"name": "search", "example": "python ...\\pdf_pgvector.py search --collection pdf --query \"markov chain\" --top-k 5"},
+            {"name": "structure", "example": "python ...\\pdf_pgvector.py structure my-paper.pdf --collection pdf"},
+            {"name": "section", "example": "python ...\\pdf_pgvector.py section my-paper.pdf --collection pdf --pages 3-5"},
         ],
         "notes": [
             "Leituras usam a collection informada exatamente como alvo; se nao existir, a skill lista as collections disponiveis.",
@@ -2158,6 +2158,7 @@ def _help_payload(parser: argparse.ArgumentParser) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    args.model = DEFAULT_MODEL
     config = _read_project_config()
 
     try:
@@ -2352,3 +2353,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

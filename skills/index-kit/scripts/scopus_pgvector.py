@@ -21,7 +21,7 @@ from psycopg.types.json import Jsonb
 
 DEFAULT_POSTGRES_DSN = "postgresql://rag:rag@localhost:5432/ragdb"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_MODEL = "embeddinggemma"
+DEFAULT_MODEL = "nomic-embed-text:latest"
 DEFAULT_EMBEDDING_DIM = 768
 CHUNK_SIZE = 4000
 CHUNK_OVERLAP = 200
@@ -154,7 +154,7 @@ def _list_collections(conn: psycopg.Connection) -> list[dict[str, Any]]:
                 d.collection AS name,
                 count(DISTINCT d.id) AS documents,
                 count(c.id) AS chunks,
-                COALESCE(c.embedding_model, d.embedding_model, 'embeddinggemma') AS embedding_model,
+                COALESCE(c.embedding_model, d.embedding_model, 'nomic-embed-text:latest') AS embedding_model,
                 COALESCE(c.embedding_dim, d.embedding_dim, vector_dims(c.embedding)) AS embedding_dim
             FROM rag_documents d
             LEFT JOIN rag_chunks c ON c.document_id = d.id
@@ -678,14 +678,6 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--original-query")
     search.add_argument("--top-k", type=int, default=5)
 
-    index_csv = subparsers.add_parser("index-csv", help="Index one Scopus CSV export.")
-    index_csv.add_argument("--collection")
-    index_csv.add_argument("--csv-path", required=True)
-
-    index_ris = subparsers.add_parser("index-ris", help="Index one Scopus RIS export.")
-    index_ris.add_argument("--collection")
-    index_ris.add_argument("--ris-path", required=True)
-
     index_files = subparsers.add_parser("index-files", help="Index one or more CSV/RIS files.")
     index_files.add_argument("--collection")
     index_files.add_argument("paths", nargs="+")
@@ -702,6 +694,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    args.model = DEFAULT_MODEL
 
     with _connect(args.postgres_dsn) as conn:
         _ensure_schema(conn)
@@ -728,20 +721,6 @@ def main(argv: list[str] | None = None) -> int:
             if collection is None:
                 return 2
             _json_print(_search(conn, args, collection))
-            return 0
-
-        if args.command == "index-csv":
-            collection = _require_collection(args, conn, for_index=True)
-            if collection is None:
-                return 2
-            _json_print(_index_file(conn, Path(args.csv_path), args, collection))
-            return 0
-
-        if args.command == "index-ris":
-            collection = _require_collection(args, conn, for_index=True)
-            if collection is None:
-                return 2
-            _json_print(_index_file(conn, Path(args.ris_path), args, collection))
             return 0
 
         if args.command == "index-files":

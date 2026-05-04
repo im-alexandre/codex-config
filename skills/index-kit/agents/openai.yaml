@@ -1,0 +1,4 @@
+interface:
+  display_name: "Index Kit"
+  short_description: "Search and inspect pgvector collections"
+  default_prompt: "Use $index-kit for list-collections, search, stats, chunk, structure, and section. Use $index-file for one RIS/CSV/PDF and $index-dir for a directory."

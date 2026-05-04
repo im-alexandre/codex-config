@@ -1,9 +1,5 @@
 {
-  "pdf-indexer": {
-    "services": ["ollama-cpu", "postgres"],
-    "required": true
-  },
-  "scopus-search": {
+  "index-kit": {
     "services": ["ollama-cpu", "postgres"],
     "required": true
   }
