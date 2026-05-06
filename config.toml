@@ -1,5 +1,5 @@
 model = "gpt-5.5"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 plan_mode_reasoning_effort = "xhigh"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
@@ -78,6 +78,18 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects.'d:\rag-benchmark']
+trust_level = "trusted"
+
+[projects.'d:\experimentos']
+trust_level = "trusted"
+
+[projects.'d:\experimentos\codex-clean']
+trust_level = "trusted"
+
+[projects.'d:\experimentos\rag-benchmark']
+trust_level = "trusted"
+
+[projects.'d:\dissertacao']
 trust_level = "trusted"
 
 [windows]

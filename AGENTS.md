@@ -16,6 +16,14 @@
 
 - When writing files, use UTF-8 encoding.
 
+## DOCX Revision And Comment Authors
+
+- When the main thread adds a revision or comment to a `.docx`, it must explicitly set the author and must never use technical labels such as `main`, `root`, `assistant`, or `codex`.
+- The main thread must choose one of these authors: `Ultron`, `Brainiac`, `Vision`, `C3PO`, `R2D2`, or `Jarvis`.
+- Before adding comments or revisions, run the `$docx-utils` `list-authors` command on the target `.docx` to check which authors already exist in the document.
+- First choose an allowed name that does not yet exist in the document.
+- If all allowed names already exist, reuse the allowed list with a numeric `-n` suffix and choose the first name/suffix that does not yet exist; example: `Ultron-1`.
+
 ## Codex project initialization
 
 When I ask to initialize/start/bootstrap a project, do this before project work:

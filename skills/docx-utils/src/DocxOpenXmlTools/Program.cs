@@ -45,6 +45,7 @@ return command switch
     "linear-equation-plan-preview" => LinearEquationPlanPreview(docxPath, options),
     "revisions" => ListRevisions(docxPath, options),
     "comments" => ListComments(docxPath, options),
+    "list-authors" => ListAuthors(docxPath),
     "comment-anchors" => ListCommentAnchors(docxPath, options),
     "validate" => Validate(docxPath),
     "export-used-styles" => ExportUsedStyles(docxPath, options),
@@ -324,6 +325,7 @@ static void PrintUsage()
     Console.WriteLine("  DocxOpenXmlTools linear-equation-plan-preview <docx> --plan json --out html");
     Console.WriteLine("  DocxOpenXmlTools revisions <docx> [--author TEXT]");
     Console.WriteLine("  DocxOpenXmlTools comments <docx> [--author TEXT]");
+    Console.WriteLine("  DocxOpenXmlTools list-authors <docx>");
     Console.WriteLine("  DocxOpenXmlTools comment-anchors <docx>");
     Console.WriteLine("  DocxOpenXmlTools validate <docx>");
     Console.WriteLine("  DocxOpenXmlTools export-used-styles <docx> [--out dir]");
@@ -1408,6 +1410,20 @@ static int ListComments(string docxPath, IReadOnlyDictionary<string, string> opt
         {
             Console.WriteLine($"    anchor=\"{anchorText}\"");
         }
+    }
+
+    return 0;
+}
+
+static int ListAuthors(string docxPath)
+{
+    using var stream = OpenSharedRead(docxPath);
+    using var doc = WordprocessingDocument.Open(stream, false);
+    var authors = GetDistinctAuthors(doc);
+
+    foreach (var author in authors)
+    {
+        Console.WriteLine(author);
     }
 
     return 0;
@@ -8834,6 +8850,51 @@ static string GetRevisionDate(OpenXmlElement element) => element switch
     DeletedRun deleted => deleted.Date is null ? "" : deleted.Date.Value.ToString("O", CultureInfo.InvariantCulture),
     _ => ""
 };
+
+static IReadOnlyList<string> GetDistinctAuthors(WordprocessingDocument doc)
+{
+    var mainPart = doc.MainDocumentPart ?? throw new InvalidOperationException("No main document part.");
+    var authors = new List<string>();
+    var seen = new HashSet<string>(StringComparer.Ordinal);
+
+    void AddAuthor(string? author)
+    {
+        var value = author?.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (seen.Add(value))
+        {
+            authors.Add(value);
+        }
+    }
+
+    foreach (var part in MainStoryParts(mainPart))
+    {
+        if (part.RootElement is null)
+        {
+            continue;
+        }
+
+        foreach (var revision in part.RootElement.Descendants<OpenXmlElement>().Where(e => e is InsertedRun or DeletedRun))
+        {
+            AddAuthor(GetRevisionAuthor(revision));
+        }
+    }
+
+    var comments = mainPart.WordprocessingCommentsPart?.Comments;
+    if (comments is not null)
+    {
+        foreach (var comment in comments.Elements<Comment>())
+        {
+            AddAuthor(comment.Author?.Value);
+        }
+    }
+
+    return authors;
+}
 
 static bool NormalizedStartsWith(string text, string prefix)
 {

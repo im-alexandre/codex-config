@@ -9,6 +9,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+Add-Type -AssemblyName System.Xml.Linq
+
 function Write-Status {
   param([string]$Message)
   Write-Host "[docx-utils] $Message"

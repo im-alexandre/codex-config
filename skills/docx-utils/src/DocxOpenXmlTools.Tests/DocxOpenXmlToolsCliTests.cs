@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Xunit;
 
 namespace DocxOpenXmlTools.Tests;
@@ -43,6 +46,27 @@ public sealed class DocxOpenXmlToolsCliTests
         Assert.Contains("OpenXmlValidationErrorsActionable: 0", validateResult.CombinedOutput);
     }
 
+    [Fact]
+    public async Task ListAuthors_deduplicates_revision_and_comment_authors()
+    {
+        var skillRoot = FindSkillRoot();
+        var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
+
+        using var tempDir = new TempDirectory();
+        var docxPath = Path.Combine(tempDir.Path, "authors.docx");
+
+        CreateDocxWithAuthors(docxPath);
+
+        var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- list-authors \"{docxPath}\"", skillRoot);
+        Assert.True(result.ExitCode == 0, result.CombinedOutput);
+
+        var authors = result.StandardOutput
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToArray();
+
+        Assert.Equal(new[] { "Alice", "Bob", "Carol" }, authors);
+    }
+
     private static string FindSkillRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -80,6 +104,61 @@ public sealed class DocxOpenXmlToolsCliTests
         await process.WaitForExitAsync();
 
         return new ProcessResult(process.ExitCode, stdout, stderr);
+    }
+
+    private static void CreateDocxWithAuthors(string docxPath)
+    {
+        var now = DateTime.UtcNow;
+
+        using var document = WordprocessingDocument.Create(docxPath, WordprocessingDocumentType.Document);
+        var mainPart = document.AddMainDocumentPart();
+        mainPart.Document = new Document(new Body());
+
+        var body = mainPart.Document.Body!;
+
+        var inserted = new InsertedRun
+        {
+            Author = "Alice",
+            Date = now,
+            Id = "1"
+        };
+        inserted.Append(new Run(new Text("Texto inserido")));
+
+        var deleted = new DeletedRun
+        {
+            Author = "Bob",
+            Date = now,
+            Id = "2"
+        };
+        deleted.Append(new DeletedText { Text = "Texto removido" });
+
+        body.Append(new Paragraph(inserted));
+        body.Append(new Paragraph(deleted));
+
+        var commentsPart = mainPart.AddNewPart<WordprocessingCommentsPart>();
+        commentsPart.Comments = new Comments();
+
+        var comment = new Comment
+        {
+            Id = "0",
+            Author = "Carol",
+            Date = now,
+            Initials = "C"
+        };
+        comment.Append(new Paragraph(new Run(new Text("Comentario"))));
+        commentsPart.Comments.Append(comment);
+
+        var commentParagraph = new Paragraph(
+            new CommentRangeStart { Id = "0" },
+            new Run(new Text("Trecho comentado")),
+            new CommentRangeEnd { Id = "0" },
+            new Run(
+                new RunProperties(new RunStyle { Val = "CommentReference" }),
+                new CommentReference { Id = "0" }));
+        body.Append(commentParagraph);
+
+        mainPart.Document.Save();
+        commentsPart.Comments.Save();
     }
 
     private sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError)
