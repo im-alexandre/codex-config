@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     image: codex-ollama:latest
     container_name: ollama-gpu
-    restart: unless-stopped
+    restart: always
     ports:
       - "11434:11434"
     environment:
@@ -39,6 +39,7 @@ services:
     profiles: ["cpu"]
     image: ollama/ollama:latest
     container_name: ollama-cpu
+    restart: always
     ports:
       - "9523:11434"
     volumes:
@@ -59,7 +60,7 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
-    restart: unless-stopped
+    restart: always
     ports:
       - "6333:6333"
       - "6334:6334"
@@ -73,6 +74,7 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: rag_pgvector
+    restart: always
     environment:
       POSTGRES_USER: rag
       POSTGRES_PASSWORD: rag
