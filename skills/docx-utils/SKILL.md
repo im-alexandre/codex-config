@@ -27,24 +27,24 @@ Use esta skill quando precisar trabalhar com utilitários .NET para inspeção, 
 
 ### Primeiro uso
 
-1. Na pasta da skill, execute `scripts/install-docx-utils.ps1`.
+1. Na pasta da skill, execute `scripts/install-docx-utils.ps1` no Windows/PowerShell ou `scripts/install-docx-utils.sh` no Linux/WSL.
 1. O script valida o SDK do .NET, descobre os projetos `.csproj`, garante as referências NuGet esperadas, faz `restore` e `build`.
 1. Se houver testes automatizados, eles são executados por padrão.
 1. Se a skill global `skill-creator` estiver instalada, a validação rápida de skill também é executada por padrão.
 
 ### Depois de alterar a fonte
 
-1. Reexecute `scripts/install-docx-utils.ps1` na fonte atualizada.
-1. Rode `~/.codex/scripts/install-docx-utils-global.ps1` para copiar a fonte para `~/.codex/skills/docx-utils` e instalar/restaurar o destino global.
+1. Reexecute `scripts/install-docx-utils.ps1` ou `scripts/install-docx-utils.sh` na fonte atualizada.
+1. Rode `~/.codex/scripts/install-docx-utils-global.ps1` ou `~/.codex/scripts/install-docx-utils-global.sh` para copiar a fonte para `~/.codex/skills/docx-utils` e instalar/restaurar o destino global.
 1. Use `-Clean` no instalador global quando quiser remover resíduos da instalação global anterior antes da cópia.
 1. Quando necessário, use `-SkipTests`, `-SkipSkillValidation` ou `-NoPackageMutation` para controlar o que o instalador faz.
 
 ## Recursos
 
-- `scripts/install-docx-utils.ps1`: prepara a skill local, restaura projetos e valida a instalação.
-- `~/.codex/scripts/install-docx-utils-global.ps1`: copia a skill para `~/.codex/skills/docx-utils` e executa a instalação no destino.
-- `bin/docx-utils/docx-utils.exe`: binário publicado preferencial para execução operacional.
-- `scripts/detect-codex-surface.ps1`: detecta se a sessão atual parece `cli` ou `app`, com override por variável de ambiente.
+- `scripts/install-docx-utils.ps1` / `scripts/install-docx-utils.sh`: prepara a skill local, restaura projetos e valida a instalação.
+- `~/.codex/scripts/install-docx-utils-global.ps1` / `~/.codex/scripts/install-docx-utils-global.sh`: copia a skill para `~/.codex/skills/docx-utils` e executa a instalação no destino.
+- `bin/docx-utils/docx-utils.exe` ou `bin/docx-utils/docx-utils`: binário publicado preferencial para execução operacional.
+- `scripts/detect-codex-surface.ps1` / `scripts/detect-codex-surface.sh`: detecta se a sessão atual parece `cli` ou `app`.
 - `BACKLOG.md`: registro de lacunas de comandos/recursos para implementação futura.
 
 ## Detecção Codex CLI/App
@@ -54,10 +54,11 @@ Use esta skill quando precisar trabalhar com utilitários .NET para inspeção, 
 
   `powershell -ExecutionPolicy Bypass -File C:\Users\imale\.codex\skills\docx-utils\scripts\detect-codex-surface.ps1`
 
-- A detecção aceita override explícito por variável de ambiente:
-  - `DOCX_UTILS_SURFACE=cli` ou `DOCX_UTILS_SURFACE=app`;
-  - `CODEX_SURFACE=cli` ou `CODEX_SURFACE=app`.
-- Sem override, `CODEX_MANAGED_BY_NPM=1` indica `cli`; se `CODEX_MANAGED_BY_NPM` não estiver definida como `1`, assumir `app`.
+- No Linux/WSL, use:
+
+  `~/.codex/skills/docx-utils/scripts/detect-codex-surface.sh`
+
+- A detecção usa apenas `CODEX_MANAGED_BY_NPM`: quando `CODEX_MANAGED_BY_NPM=1`, assume `cli`; caso contrário, assume `app`.
 - Se o usuário informar explicitamente que a sessão atual é CLI ou app, trate essa informação como override para a rodada atual.
 
 ## Comentários DOCX
