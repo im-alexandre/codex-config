@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -14,7 +15,16 @@ using W16Cex = DocumentFormat.OpenXml.Office2021.Word.CommentsExt;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Markdig;
 using M = DocumentFormat.OpenXml.Math;
+
+Console.OutputEncoding = Encoding.UTF8;
+
+if (args.Length == 1 && IsHelpArgument(args[0]))
+{
+    PrintUsage();
+    return 0;
+}
 
 if (args.Length < 2)
 {
@@ -23,6 +33,13 @@ if (args.Length < 2)
 }
 
 var command = args[0].Trim().ToLowerInvariant();
+
+if (command is "help" or "-h" or "--help" or "/?")
+{
+    PrintUsage();
+    return 0;
+}
+
 var docxPath = Path.GetFullPath(args[1]);
 
 if (!File.Exists(docxPath))
@@ -45,7 +62,6 @@ return command switch
     "linear-equation-plan-preview" => LinearEquationPlanPreview(docxPath, options),
     "revisions" => ListRevisions(docxPath, options),
     "comments" => ListComments(docxPath, options),
-    "list-authors" => ListAuthors(docxPath),
     "comment-anchors" => ListCommentAnchors(docxPath, options),
     "validate" => Validate(docxPath),
     "export-used-styles" => ExportUsedStyles(docxPath, options),
@@ -62,6 +78,7 @@ return command switch
     "disable-update-fields-on-open" => DisableUpdateFieldsOnOpen(docxPath, options),
     "normalize-figure-indent" => NormalizeFigureIndent(docxPath, options),
     "apply-table-design-style" => ApplyTableDesignStyle(docxPath, options),
+    "replace-table" => ReplaceTable(docxPath, options),
     "replace-figures-from-plan" => ReplaceFiguresFromPlan(docxPath, options),
     "replace-formulas-with-linear-equations" => ReplaceFormulasWithLinearOfficeMath(docxPath, options),
     "replace-formulas-with-mathml-omml" => ReplaceFormulasWithMathMlOfficeMath(docxPath, options),
@@ -99,7 +116,7 @@ static int AcceptRevisions(string docxPath, IReadOnlyDictionary<string, string> 
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools accept-revisions {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils accept-revisions {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -204,14 +221,10 @@ static int AcceptRevisions(string docxPath, IReadOnlyDictionary<string, string> 
 
 static int AppendParagraphs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("--plan is required");
-        return 4;
-    }
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("--author is required");
         return 4;
     }
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
@@ -241,7 +254,7 @@ static int AppendParagraphs(string docxPath, IReadOnlyDictionary<string, string>
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools append-paragraphs {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils append-paragraphs {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -312,55 +325,225 @@ static int UnknownCommand(string command)
     return 3;
 }
 
+static bool IsHelpArgument(string value)
+{
+    var normalized = value.Trim().ToLowerInvariant();
+    return normalized is "help" or "-h" or "--help" or "/?";
+}
+
 static void PrintUsage()
 {
-    Console.WriteLine("Usage:");
-    Console.WriteLine("  DocxOpenXmlTools paragraphs <docx> [--start N] [--count N] [--contains TEXT] [--all true|false]");
-    Console.WriteLine("  DocxOpenXmlTools paragraph-detail <docx> --index N [--all true|false]");
-    Console.WriteLine("  DocxOpenXmlTools structure-audit <docx> [--out json]");
-    Console.WriteLine("  DocxOpenXmlTools layout-audit <docx> [--out json] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools equations-audit <docx> [--out json]");
-    Console.WriteLine("  DocxOpenXmlTools math-audit <docx> [--out json]");
-    Console.WriteLine("  DocxOpenXmlTools math-text-audit <docx> [--out json]");
-    Console.WriteLine("  DocxOpenXmlTools linear-equation-plan-preview <docx> --plan json --out html");
-    Console.WriteLine("  DocxOpenXmlTools revisions <docx> [--author TEXT]");
-    Console.WriteLine("  DocxOpenXmlTools comments <docx> [--author TEXT]");
-    Console.WriteLine("  DocxOpenXmlTools list-authors <docx>");
-    Console.WriteLine("  DocxOpenXmlTools comment-anchors <docx>");
-    Console.WriteLine("  DocxOpenXmlTools validate <docx>");
-    Console.WriteLine("  DocxOpenXmlTools export-used-styles <docx> [--out dir]");
-    Console.WriteLine("  DocxOpenXmlTools ensure-canonical-styles <docx> --author NAME --lock <lockfile> [--source dir] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools sync-styles-from-docx <target.docx> --source-docx <source.docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools insert-tracked <docx> --plan <json> [--author NAME] [--lock <lockfile>] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools insert-blocks <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools edit-paragraphs <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools rewrite-equation-blocks <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools format-equation-paragraphs <docx> --author NAME --lock <lockfile> [--style-id ID] [--seq-name NAME] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools style-running-text <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools ensure-style-fonts <docx> --author NAME --lock <lockfile> [--font NAME] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools enable-update-fields-on-open <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools disable-update-fields-on-open <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools normalize-figure-indent <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools apply-table-design-style <docx> --author NAME --lock <lockfile> --style-id ID [--style-name NAME] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools replace-figures-from-plan <docx> --plan json --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools replace-formulas-with-linear-equations <docx> --plan json --author NAME --lock <lockfile> [--keep-linear true|false] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools replace-formulas-with-mathml-omml <docx> --plan json --author NAME --lock <lockfile> [--xsl MML2OMML.XSL] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools convert-text-formulas-to-omath <docx> --plan json --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools repair-article-abnt-layout <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools format-abnt-reference-titles <docx> --author NAME --lock <lockfile> [--target publication|article|both] [--emphasis italic|bold] [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools repair-validation <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools apply-crossrefs <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools add-bookmarks <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools rewrite-ref-fields <docx> --author NAME --lock <lockfile> --bookmark-prefixes CSV --template TEXT [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools repair-style-captions <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools repair-layout-pendencies <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools repair-ref-number-only <docx> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools insert-figures <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools insert-comments <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools reanchor-comments <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools answer-comments <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools reply-comments <docx> --plan <json> --author NAME --lock <lockfile> [--report md]");
-    Console.WriteLine("  DocxOpenXmlTools remove-comments <docx> --ids CSV|all --author NAME --lock <lockfile> [--report md]");
+    Console.WriteLine("""
+Uso:
+  docx-utils <comando> <docx> [opcoes]
+
+Notas gerais:
+  - Comandos que alteram DOCX exigem --lock <lockfile> para escrita exclusiva.
+  - Em mutacoes, --author e opcional para a thread principal: se omitido, o utilitario escolhe automaticamente o proximo autor livre no DOCX.
+  - Subagents devem passar --author com o nome atribuido ao subagent.
+  - Planos JSON devem ser arquivos no formato esperado pelo comando; use --report md para gerar um relatorio auditavel quando disponivel.
+  - A listagem externa de autores foi removida; a leitura de autores existe apenas como logica interna do autor automatico.
+
+Inspecao e auditoria:
+  paragraphs <docx> [--start N] [--count N] [--contains TEXT] [--all true|false]
+    Lista paragrafos com indice e texto. Serve para achar ancoras antes de montar planos JSON.
+    Exemplo: docx-utils paragraphs tese.docx --contains "Resultados" --count 20
+
+  paragraph-detail <docx> --index N [--all true|false]
+    Mostra detalhes de um paragrafo especifico, incluindo estilo e numeracao efetiva.
+    Exemplo: docx-utils paragraph-detail tese.docx --index 42
+
+  structure-audit <docx> [--out json]
+    Audita estrutura geral: paragrafos, tabelas, figuras e equacoes.
+    Exemplo: docx-utils structure-audit tese.docx --out estrutura.json
+
+  layout-audit <docx> [--out json] [--report md]
+    Audita layout de tabelas e figuras, incluindo estilos, larguras, alinhamento, fonte e fonte/legenda.
+    Exemplo: docx-utils layout-audit tese.docx --out layout.json --report layout.md
+
+  equations-audit <docx> [--out json]
+    Audita equacoes, campos SEQ e numeracao de equacoes de dissertacao.
+    Exemplo: docx-utils equations-audit tese.docx --out equacoes.json
+
+  math-audit <docx> [--out json]
+    Lista blocos Office Math e candidatos matematicos relevantes.
+    Exemplo: docx-utils math-audit tese.docx --out math.json
+
+  math-text-audit <docx> [--out json]
+    Procura formulas textuais que podem precisar virar Office Math.
+    Exemplo: docx-utils math-text-audit tese.docx --out formulas_texto.json
+
+  linear-equation-plan-preview <docx> --plan json --out html
+    Gera uma previa HTML de plano de conversao de equacoes lineares antes de mutar o DOCX.
+    Exemplo: docx-utils linear-equation-plan-preview tese.docx --plan equacoes.json --out previa.html
+
+  revisions <docx> [--author TEXT]
+    Lista revisoes rastreadas, opcionalmente filtradas por autor.
+    Exemplo: docx-utils revisions tese.docx --author Ultron
+
+  comments <docx> [--author TEXT] [--format auto|table|json|markdown|raw]
+    Lista comentarios e respostas. Sem --format, detecta o ambiente: tabela no CLI e Markdown no app.
+    Use --format json para dados estruturados ou --format raw para recuperar a saida textual legada.
+    Exemplo: docx-utils comments tese.docx --author Brainiac
+
+  comment-anchors <docx>
+    Lista paragrafos que possuem marcadores de comentario e os IDs associados.
+    Exemplo: docx-utils comment-anchors tese.docx
+
+  validate <docx>
+    Valida o pacote Open XML e informa TrackRevisions, campos e erros acionaveis.
+    Exemplo: docx-utils validate tese.docx
+
+Estilos e formatacao:
+  export-used-styles <docx> [--out dir]
+    Exporta estilos usados no DOCX para inspecao/canonizacao.
+    Exemplo: docx-utils export-used-styles tese.docx --out estilos_usados
+
+  ensure-canonical-styles <docx> [--author NAME] --lock <lockfile> [--source dir] [--report md]
+    Copia estilos canonicos para o DOCX e normaliza estilo de tabela academica.
+    Exemplo: docx-utils ensure-canonical-styles tese.docx --lock tese.lock --source references/estilos --report estilos.md
+
+  sync-styles-from-docx <target.docx> --source-docx <source.docx> [--author NAME] --lock <lockfile> [--report md]
+    Sincroniza estilos do DOCX fonte para o DOCX alvo.
+    Exemplo: docx-utils sync-styles-from-docx tese.docx --source-docx base.docx --lock tese.lock --report sync.md
+
+  style-running-text <docx> [--author NAME] --lock <lockfile> [--report md]
+    Aplica estilo/fonte/tamanho de texto corrido em paragrafos elegiveis, preservando estilos protegidos.
+    Exemplo: docx-utils style-running-text tese.docx --lock tese.lock --report texto_corrido.md
+
+  ensure-style-fonts <docx> [--author NAME] --lock <lockfile> [--font NAME] [--report md]
+    Garante fonte dos estilos relevantes.
+    Exemplo: docx-utils ensure-style-fonts tese.docx --lock tese.lock --font "Times New Roman"
+
+  format-equation-paragraphs <docx> [--author NAME] --lock <lockfile> [--style-id ID] [--seq-name NAME] [--report md]
+    Aplica estilo e ajustes de paragrafo em equacoes numeradas.
+    Exemplo: docx-utils format-equation-paragraphs tese.docx --lock tese.lock --style-id Equacao --report equacoes.md
+
+  normalize-figure-indent <docx> [--author NAME] --lock <lockfile> [--report md]
+    Remove recuo indevido e centraliza paragrafos de figura.
+    Exemplo: docx-utils normalize-figure-indent tese.docx --lock tese.lock --report figuras.md
+
+  apply-table-design-style <docx> [--author NAME] --lock <lockfile> --style-id ID [--style-name NAME] [--report md]
+    Aplica estilo de tabela, como tabelauerj, em tabelas do documento.
+    Exemplo: docx-utils apply-table-design-style tese.docx --lock tese.lock --style-id tabelauerj --style-name tabela_uerj
+
+  replace-table <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Substitui uma tabela existente preservando propriedades da tabela e estilos das celulas conforme o plano.
+    Exemplo: docx-utils replace-table tese.docx --plan tabela.json --lock tese.lock --report tabela.md
+
+  enable-update-fields-on-open <docx> [--author NAME] --lock <lockfile> [--report md]
+    Configura o Word para atualizar campos ao abrir.
+    Exemplo: docx-utils enable-update-fields-on-open tese.docx --lock tese.lock
+
+  disable-update-fields-on-open <docx> [--author NAME] --lock <lockfile> [--report md]
+    Remove a configuracao de atualizar campos ao abrir.
+    Exemplo: docx-utils disable-update-fields-on-open tese.docx --lock tese.lock
+
+Edicao com revisoes rastreadas:
+  insert-tracked <docx> --plan <json> [--author NAME] [--lock <lockfile>] [--report md]
+    Insere paragrafos com revisao rastreada entre ancoras after/before.
+    Exemplo: docx-utils insert-tracked tese.docx --plan insercoes.json --lock tese.lock --report insercoes.md
+
+  insert-blocks <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Insere blocos de paragrafo/tabela com revisoes, evitando duplicatas por uniqueText.
+    Exemplo: docx-utils insert-blocks tese.docx --plan blocos.json --lock tese.lock --report blocos.md
+
+  append-paragraphs <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Acrescenta blocos ao final do documento com revisoes rastreadas.
+    Exemplo: docx-utils append-paragraphs tese.docx --plan apendice.json --lock tese.lock
+
+  edit-paragraphs <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Altera texto e/ou estilo de paragrafos localizados por prefixo.
+    Exemplo: docx-utils edit-paragraphs tese.docx --plan edicoes.json --lock tese.lock --report edicoes.md
+
+Figuras, formulas e referencias:
+  insert-figures <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Insere figuras com legenda e fonte a partir de plano JSON.
+    Exemplo: docx-utils insert-figures tese.docx --plan figuras.json --lock tese.lock --report figuras.md
+
+  replace-figures-from-plan <docx> --plan json [--author NAME] --lock <lockfile> [--report md]
+    Substitui imagens existentes mantendo a estrutura indicada pelo plano.
+    Exemplo: docx-utils replace-figures-from-plan tese.docx --plan substituir_figuras.json --lock tese.lock
+
+  rewrite-equation-blocks <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Reescreve blocos de equacao por ancoras textuais.
+    Exemplo: docx-utils rewrite-equation-blocks tese.docx --plan eq_rewrite.json --lock tese.lock
+
+  replace-formulas-with-linear-equations <docx> --plan json [--author NAME] --lock <lockfile> [--keep-linear true|false] [--report md]
+    Converte formulas textuais em equacoes Office Math a partir de LaTeX linear.
+    Exemplo: docx-utils replace-formulas-with-linear-equations tese.docx --plan formulas.json --lock tese.lock --report formulas.md
+
+  replace-formulas-with-mathml-omml <docx> --plan json [--author NAME] --lock <lockfile> [--xsl MML2OMML.XSL] [--report md]
+    Converte MathML para OMML/Office Math usando XSL.
+    Exemplo: docx-utils replace-formulas-with-mathml-omml tese.docx --plan mathml.json --lock tese.lock --xsl MML2OMML.XSL
+
+  convert-text-formulas-to-omath <docx> --plan json [--author NAME] --lock <lockfile> [--report md]
+    Alias legado: encaminha para o fluxo padronizado de LaTeX linear.
+    Exemplo: docx-utils convert-text-formulas-to-omath tese.docx --plan formulas.json --lock tese.lock
+
+  apply-crossrefs <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Numera legendas, adiciona bookmarks e converte chamadas em referencias cruzadas.
+    Exemplo: docx-utils apply-crossrefs tese.docx --plan crossrefs.json --lock tese.lock --report crossrefs.md
+
+  add-bookmarks <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Adiciona bookmarks em paragrafos alvo.
+    Exemplo: docx-utils add-bookmarks tese.docx --plan bookmarks.json --lock tese.lock
+
+  rewrite-ref-fields <docx> [--author NAME] --lock <lockfile> --bookmark-prefixes CSV --template TEXT [--report md]
+    Reescreve campos REF existentes com base em prefixos de bookmark.
+    Exemplo: docx-utils rewrite-ref-fields tese.docx --lock tese.lock --bookmark-prefixes fig_,tab_ --template "REF {0} \h"
+
+Comentarios:
+  insert-comments <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Insere comentarios ancorados por prefixo/contains.
+    Exemplo: docx-utils insert-comments tese.docx --plan comentarios.json --lock tese.lock --report comentarios.md
+
+  reanchor-comments <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Move marcadores de comentarios existentes para novos paragrafos.
+    Exemplo: docx-utils reanchor-comments tese.docx --plan reancorar.json --lock tese.lock
+
+  answer-comments <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Acrescenta resposta textual dentro do comentario existente.
+    Exemplo: docx-utils answer-comments tese.docx --plan respostas.json --lock tese.lock
+
+  reply-comments <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Cria replies modernas vinculadas a comentarios pai.
+    Exemplo: docx-utils reply-comments tese.docx --plan replies.json --lock tese.lock
+
+  remove-comments <docx> --ids CSV|all [--author NAME] --lock <lockfile> [--report md]
+    Remove comentarios por ID ou todos os comentarios.
+    Exemplo: docx-utils remove-comments tese.docx --ids 3,4 --lock tese.lock
+
+Reparos e ajustes academicos:
+  repair-article-abnt-layout <docx> [--author NAME] --lock <lockfile> [--report md]
+    Repara layout ABNT de artigo, incluindo estilos e elementos estruturais previstos pelo utilitario.
+    Exemplo: docx-utils repair-article-abnt-layout artigo.docx --lock artigo.lock --report abnt.md
+
+  format-abnt-reference-titles <docx> [--author NAME] --lock <lockfile> [--target publication|article|both] [--emphasis italic|bold] [--report md]
+    Aplica destaque ABNT em titulos de referencias conforme alvo e enfase.
+    Exemplo: docx-utils format-abnt-reference-titles tese.docx --lock tese.lock --target both --emphasis bold
+
+  repair-validation <docx> [--author NAME] --lock <lockfile> [--report md]
+    Remove/ajusta marcadores Open XML conhecidos que causam erros de validacao.
+    Exemplo: docx-utils repair-validation tese.docx --lock tese.lock --report validacao.md
+
+  repair-style-captions <docx> --plan <json> [--author NAME] --lock <lockfile> [--report md]
+    Repara estilos de legendas conforme plano de captions/crossrefs.
+    Exemplo: docx-utils repair-style-captions tese.docx --plan captions.json --lock tese.lock
+
+  repair-layout-pendencies <docx> [--author NAME] --lock <lockfile> [--report md]
+    Corrige pendencias de layout conhecidas em figuras, tabelas e fontes.
+    Exemplo: docx-utils repair-layout-pendencies tese.docx --lock tese.lock --report pendencias.md
+
+  repair-ref-number-only <docx> [--author NAME] --lock <lockfile> [--report md]
+    Repara referencias cruzadas que devem exibir apenas numero.
+    Exemplo: docx-utils repair-ref-number-only tese.docx --lock tese.lock --report refs.md
+
+Finalizacao:
+  accept-revisions <docx> --lock <lockfile> [--disable-track true|false] [--report md]
+    Aceita insercoes/delecoes rastreadas e opcionalmente desativa TrackRevisions.
+    Exemplo: docx-utils accept-revisions tese.docx --lock tese.lock --disable-track true --report aceite.md
+""");
 }
 
 static Dictionary<string, string> ParseOptions(string[] args)
@@ -385,6 +568,51 @@ static Dictionary<string, string> ParseOptions(string[] args)
     return options;
 }
 
+static IReadOnlyList<string> DefaultMutationAuthors() =>
+[
+    "Ultron",
+    "Brainiac",
+    "Jarvis",
+    "Vision",
+    "HumanTorch",
+    "Friday",
+    "C3PO",
+    "R2D2"
+];
+
+static string ResolveMutationAuthor(string docxPath, IReadOnlyDictionary<string, string> options)
+{
+    if (options.TryGetValue("author", out var explicitAuthor) && !string.IsNullOrWhiteSpace(explicitAuthor))
+    {
+        return explicitAuthor;
+    }
+
+    using var doc = WordprocessingDocument.Open(docxPath, false);
+    var existingAuthors = GetDistinctAuthors(doc).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    var defaultAuthors = DefaultMutationAuthors();
+
+    foreach (var author in defaultAuthors)
+    {
+        if (!existingAuthors.Contains(author))
+        {
+            return author;
+        }
+    }
+
+    for (var suffix = 1; ; suffix++)
+    {
+        foreach (var author in defaultAuthors)
+        {
+            var candidate = $"{author}-{suffix}";
+            if (!existingAuthors.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+    }
+}
+
 static JsonSerializerOptions JsonOptions() => new()
 {
     PropertyNameCaseInsensitive = true,
@@ -397,7 +625,8 @@ static JsonSerializerOptions JsonOptionsIndented() => new()
     PropertyNameCaseInsensitive = true,
     ReadCommentHandling = JsonCommentHandling.Skip,
     AllowTrailingCommas = true,
-    WriteIndented = true
+    WriteIndented = true,
+    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 };
 
 static bool IsTrueOption(IReadOnlyDictionary<string, string> options, string name) =>
@@ -1382,6 +1611,7 @@ static int ListComments(string docxPath, IReadOnlyDictionary<string, string> opt
         .Where(x => !string.IsNullOrWhiteSpace(x.CommentId) && !string.IsNullOrWhiteSpace(x.ParaId))
         .ToDictionary(x => x.ParaId!, x => x.CommentId!, StringComparer.Ordinal);
 
+    var entries = new List<CommentListEntry>();
     foreach (var comment in commentsPart.Comments.Elements<Comment>())
     {
         var author = comment.Author?.Value ?? "";
@@ -1405,28 +1635,98 @@ static int ListComments(string docxPath, IReadOnlyDictionary<string, string> opt
         var parentSuffix = string.IsNullOrWhiteSpace(parentCommentId)
             ? ""
             : $" parentCommentId=\"{parentCommentId}\"";
-        Console.WriteLine($"comment id=\"{id}\" author=\"{author}\" date=\"{comment.Date?.Value}\"{parentSuffix} text=\"{ElementText(comment)}\"");
-        if (!string.IsNullOrWhiteSpace(anchorText))
-        {
-            Console.WriteLine($"    anchor=\"{anchorText}\"");
-        }
+        entries.Add(new CommentListEntry(
+            id,
+            author,
+            comment.Date?.Value.ToString(CultureInfo.CurrentCulture) ?? "",
+            parentCommentId,
+            ElementText(comment),
+            anchorText ?? ""));
     }
 
+    var formatValue = options.TryGetValue("format", out var requestedFormat)
+        ? requestedFormat
+        : "auto";
+    var format = ResolveCommentsFormat(formatValue);
+
+    if (format is "json")
+    {
+        WriteCommentsJson(entries);
+        return 0;
+    }
+
+    if (format is "raw" or "legacy" or "text")
+    {
+        foreach (var entry in entries)
+        {
+            var parentSuffix = string.IsNullOrWhiteSpace(entry.ParentCommentId)
+                ? ""
+                : $" parentCommentId=\"{entry.ParentCommentId}\"";
+            Console.WriteLine($"comment id=\"{entry.Id}\" author=\"{entry.Author}\" date=\"{entry.Date}\"{parentSuffix} text=\"{entry.Text}\"");
+            if (!string.IsNullOrWhiteSpace(entry.AnchorText))
+            {
+                Console.WriteLine($"    anchor=\"{entry.AnchorText}\"");
+            }
+        }
+
+        return 0;
+    }
+
+    if (format is "table" or "console" or "console-table")
+    {
+        WriteTabularOutput(BuildCommentsOutputTable(entries, includeIndex: true), "table");
+        return 0;
+    }
+
+    if (format is not "md" and not "markdown")
+    {
+        Console.Error.WriteLine($"Unsupported comments format: {formatValue}");
+        return 4;
+    }
+
+    WriteTabularOutput(BuildCommentsOutputTable(entries, includeIndex: false), "markdown");
     return 0;
 }
 
-static int ListAuthors(string docxPath)
-{
-    using var stream = OpenSharedRead(docxPath);
-    using var doc = WordprocessingDocument.Open(stream, false);
-    var authors = GetDistinctAuthors(doc);
-
-    foreach (var author in authors)
+static string ResolveDefaultCommentsFormat() =>
+    DetectCodexSurface() switch
     {
-        Console.WriteLine(author);
+        "cli" => "table",
+        "app" => "markdown",
+        _ => "markdown"
+    };
+
+static string ResolveCommentsFormat(string? formatValue)
+{
+    var format = Normalize(formatValue ?? "auto");
+    return format is "" or "auto"
+        ? ResolveDefaultCommentsFormat()
+        : format;
+}
+
+static string DetectCodexSurface()
+{
+    var overrideValue = Environment.GetEnvironmentVariable("DOCX_UTILS_SURFACE");
+    if (string.IsNullOrWhiteSpace(overrideValue))
+    {
+        overrideValue = Environment.GetEnvironmentVariable("CODEX_SURFACE");
     }
 
-    return 0;
+    if (overrideValue is not null)
+    {
+        var normalized = Normalize(overrideValue);
+        if (normalized is "cli" or "app")
+        {
+            return normalized;
+        }
+    }
+
+    if (string.Equals(Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_NPM"), "1", StringComparison.Ordinal))
+    {
+        return "cli";
+    }
+
+    return "app";
 }
 
 static int ListCommentAnchors(string docxPath, IReadOnlyDictionary<string, string> options)
@@ -1485,9 +1785,7 @@ static int InsertTracked(string docxPath, IReadOnlyDictionary<string, string> op
         return 6;
     }
 
-    var author = options.TryGetValue("author", out var authorValue)
-        ? authorValue
-        : Environment.UserName;
+    var author = ResolveMutationAuthor(docxPath, options);
 
     FileStream? lockStream = null;
     string? lockPath = null;
@@ -1499,7 +1797,7 @@ static int InsertTracked(string docxPath, IReadOnlyDictionary<string, string> op
         {
             lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             lockStream.SetLength(0);
-            lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools insert-tracked {DateTime.UtcNow:O}\n"));
+            lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils insert-tracked {DateTime.UtcNow:O}\n"));
             lockStream.Flush();
         }
         catch (IOException ex)
@@ -1600,17 +1898,13 @@ static int InsertTracked(string docxPath, IReadOnlyDictionary<string, string> op
 
 static int InsertBlocks(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -1643,7 +1937,7 @@ static int InsertBlocks(string docxPath, IReadOnlyDictionary<string, string> opt
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools insert-blocks {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils insert-blocks {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -1717,17 +2011,13 @@ static int InsertBlocks(string docxPath, IReadOnlyDictionary<string, string> opt
 
 static int EditParagraphs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -1760,7 +2050,7 @@ static int EditParagraphs(string docxPath, IReadOnlyDictionary<string, string> o
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools edit-paragraphs {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils edit-paragraphs {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -1841,11 +2131,7 @@ static int EditParagraphs(string docxPath, IReadOnlyDictionary<string, string> o
 
 static int StyleRunningText(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -1872,7 +2158,7 @@ static int StyleRunningText(string docxPath, IReadOnlyDictionary<string, string>
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools style-running-text {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils style-running-text {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -1970,11 +2256,7 @@ static int StyleRunningText(string docxPath, IReadOnlyDictionary<string, string>
 
 static int RepairValidation(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -1986,7 +2268,7 @@ static int RepairValidation(string docxPath, IReadOnlyDictionary<string, string>
     Directory.CreateDirectory(Path.GetDirectoryName(lockPath) ?? ".");
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools repair-validation {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils repair-validation {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     var changes = new List<string>();
@@ -2090,17 +2372,13 @@ static int RepairValidation(string docxPath, IReadOnlyDictionary<string, string>
 
 static int ApplyCrossrefs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -2136,7 +2414,7 @@ static int ApplyCrossrefs(string docxPath, IReadOnlyDictionary<string, string> o
     var skipped = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools apply-crossrefs {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils apply-crossrefs {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     WordprocessingDocument doc;
@@ -2239,17 +2517,13 @@ static int ApplyCrossrefs(string docxPath, IReadOnlyDictionary<string, string> o
 
 static int RepairStyleCaptions(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -2284,7 +2558,7 @@ static int RepairStyleCaptions(string docxPath, IReadOnlyDictionary<string, stri
     var skipped = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools repair-style-captions {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils repair-style-captions {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     WordprocessingDocument doc;
@@ -2382,17 +2656,13 @@ static int RepairStyleCaptions(string docxPath, IReadOnlyDictionary<string, stri
 
 static int AddBookmarks(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -2427,7 +2697,7 @@ static int AddBookmarks(string docxPath, IReadOnlyDictionary<string, string> opt
     var skipped = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools add-bookmarks {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils add-bookmarks {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -2484,11 +2754,7 @@ static int AddBookmarks(string docxPath, IReadOnlyDictionary<string, string> opt
 
 static int RewriteRefFields(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -2527,7 +2793,7 @@ static int RewriteRefFields(string docxPath, IReadOnlyDictionary<string, string>
     var applied = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools rewrite-ref-fields {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils rewrite-ref-fields {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -2603,11 +2869,7 @@ static bool TryRewriteRefInstruction(string instruction, string[] prefixes, stri
 
 static int RepairLayoutPendencies(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -2625,7 +2887,7 @@ static int RepairLayoutPendencies(string docxPath, IReadOnlyDictionary<string, s
     var skipped = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools repair-layout-pendencies {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils repair-layout-pendencies {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     WordprocessingDocument doc;
@@ -2716,11 +2978,7 @@ static int RepairLayoutPendencies(string docxPath, IReadOnlyDictionary<string, s
 
 static int RepairArticleAbntLayout(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -2738,7 +2996,7 @@ static int RepairArticleAbntLayout(string docxPath, IReadOnlyDictionary<string, 
     var skipped = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools repair-article-abnt-layout {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils repair-article-abnt-layout {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     WordprocessingDocument doc;
@@ -2835,11 +3093,7 @@ static int RepairArticleAbntLayout(string docxPath, IReadOnlyDictionary<string, 
 
 static int FormatAbntReferenceTitles(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -2866,7 +3120,7 @@ static int FormatAbntReferenceTitles(string docxPath, IReadOnlyDictionary<string
     var skipped = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools format-abnt-reference-titles {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils format-abnt-reference-titles {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using (var doc = WordprocessingDocument.Open(docxPath, true))
@@ -3051,7 +3305,7 @@ static string BuildAbntReferenceTitleReport(
     builder.AppendLine($"- Documento: `{docxPath}`");
     builder.AppendLine($"- Lock: `{lockPath}`");
     builder.AppendLine($"- Autor da etapa: `{author}`");
-    builder.AppendLine($"- Utilitario/codigo usado: `D:\\docx_utils\\DocxOpenXmlTools`, comando `format-abnt-reference-titles` (.NET + Open XML)");
+    builder.AppendLine("- Utilitario/codigo usado: `docx-utils`, comando `format-abnt-reference-titles` (.NET + Open XML)");
     builder.AppendLine($"- Enfase aplicada: `{emphasis}`");
     builder.AppendLine($"- Gerado em UTC: `{DateTime.UtcNow:O}`");
     builder.AppendLine("- Regra: aplicar destaque tipografico uniforme aos titulos das publicacoes/obras-fonte nas referencias, mantendo os titulos dos artigos em texto romano.");
@@ -3074,11 +3328,11 @@ static string BuildAbntReferenceTitleReport(
 
 static int RewriteEquationBlocks(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue)
-        || !options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author)
         || !options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
-        Console.Error.WriteLine("Missing required options: --plan, --author and --lock");
+        Console.Error.WriteLine("Missing required options: --plan and --lock");
         return 4;
     }
 
@@ -3106,7 +3360,7 @@ static int RewriteEquationBlocks(string docxPath, IReadOnlyDictionary<string, st
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools rewrite-equation-blocks {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils rewrite-equation-blocks {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3172,11 +3426,7 @@ static int RewriteEquationBlocks(string docxPath, IReadOnlyDictionary<string, st
 
 static int EnsureStyleFonts(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3196,7 +3446,7 @@ static int EnsureStyleFonts(string docxPath, IReadOnlyDictionary<string, string>
     var applied = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools ensure-style-fonts {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils ensure-style-fonts {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3267,11 +3517,7 @@ static int EnsureStyleFonts(string docxPath, IReadOnlyDictionary<string, string>
 
 static int FormatEquationParagraphs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3291,7 +3537,7 @@ static int FormatEquationParagraphs(string docxPath, IReadOnlyDictionary<string,
     var applied = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools format-equation-paragraphs {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils format-equation-paragraphs {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3371,11 +3617,7 @@ static int FormatEquationParagraphs(string docxPath, IReadOnlyDictionary<string,
 
 static int NormalizeFigureIndent(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3392,7 +3634,7 @@ static int NormalizeFigureIndent(string docxPath, IReadOnlyDictionary<string, st
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools normalize-figure-indent {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils normalize-figure-indent {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3504,11 +3746,7 @@ static void AddIfPresentOrRequired(Styles styles, List<string> styleIds, string 
 
 static int EnsureCanonicalStylesCommand(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3527,7 +3765,7 @@ static int EnsureCanonicalStylesCommand(string docxPath, IReadOnlyDictionary<str
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools ensure-canonical-styles {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils ensure-canonical-styles {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3555,6 +3793,7 @@ static int EnsureCanonicalStylesCommand(string docxPath, IReadOnlyDictionary<str
 
 static int SyncStylesFromDocxCommand(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("source-docx", out var sourceDocxValue) || string.IsNullOrWhiteSpace(sourceDocxValue))
     {
         Console.Error.WriteLine("Missing required option: --source-docx");
@@ -3568,11 +3807,6 @@ static int SyncStylesFromDocxCommand(string docxPath, IReadOnlyDictionary<string
         return 5;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3588,7 +3822,7 @@ static int SyncStylesFromDocxCommand(string docxPath, IReadOnlyDictionary<string
     Directory.CreateDirectory(Path.GetDirectoryName(lockPath) ?? ".");
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools sync-styles-from-docx {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils sync-styles-from-docx {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var targetDoc = WordprocessingDocument.Open(docxPath, true);
@@ -3618,11 +3852,7 @@ static int SyncStylesFromDocxCommand(string docxPath, IReadOnlyDictionary<string
 
 static int ApplyTableDesignStyle(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3648,7 +3878,7 @@ static int ApplyTableDesignStyle(string docxPath, IReadOnlyDictionary<string, st
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools apply-table-design-style {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils apply-table-design-style {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3677,13 +3907,101 @@ static int ApplyTableDesignStyle(string docxPath, IReadOnlyDictionary<string, st
     return 0;
 }
 
-static int ReplaceFiguresFromPlan(string docxPath, IReadOnlyDictionary<string, string> options)
+static int ReplaceTable(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author)
-        || !options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
+    var author = ResolveMutationAuthor(docxPath, options);
+    if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
         || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
     {
-        Console.Error.WriteLine("Missing required options: --plan, --author and --lock");
+        Console.Error.WriteLine("Missing required options: --plan and --lock");
+        return 4;
+    }
+
+    var lockPath = Path.GetFullPath(lockPathValue);
+    var planPath = Path.GetFullPath(planPathValue);
+    if (!File.Exists(planPath))
+    {
+        Console.Error.WriteLine($"Plan not found: {planPath}");
+        return 5;
+    }
+
+    var reportPath = options.TryGetValue("report", out var reportPathValue) && !string.IsNullOrWhiteSpace(reportPathValue)
+        ? Path.GetFullPath(reportPathValue)
+        : null;
+    var plan = JsonSerializer.Deserialize<ReplaceTablePlan>(File.ReadAllText(planPath, Encoding.UTF8), JsonOptions()) ?? new ReplaceTablePlan();
+    if (plan.Tables.Count == 0)
+    {
+        Console.Error.WriteLine("Unable to read replace-table plan or `tables` is empty.");
+        return 6;
+    }
+
+    foreach (var spec in plan.Tables)
+    {
+        if (!HasTableSelector(spec))
+        {
+            Console.Error.WriteLine($"Plan item `{spec.Id}` must define a selector using `ordinal`, `block`, `firstCellText`, `previousParagraphPrefix`, or `nextParagraphPrefix`.");
+            return 4;
+        }
+
+        if (spec.Rows is null || spec.Rows.Count == 0)
+        {
+            Console.Error.WriteLine($"Plan item `{spec.Id}` must include at least one row in `rows`.");
+            return 4;
+        }
+
+        if (spec.Rows.Select(row => row?.Count ?? 0).DefaultIfEmpty(0).Max() == 0)
+        {
+            Console.Error.WriteLine($"Plan item `{spec.Id}` must include at least one cell across the replacement rows.");
+            return 4;
+        }
+    }
+
+    var lockDirectory = Path.GetDirectoryName(lockPath) ?? ".";
+    Directory.CreateDirectory(lockDirectory);
+    var applied = new List<string>();
+    var skipped = new List<string>();
+
+    using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+    lockStream.SetLength(0);
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils replace-table {DateTime.UtcNow:O}\n"));
+    lockStream.Flush();
+
+    using var doc = WordprocessingDocument.Open(docxPath, true);
+    var body = doc.MainDocumentPart?.Document.Body ?? throw new InvalidOperationException("Document body not found.");
+
+    foreach (var spec in plan.Tables)
+    {
+        var selection = SelectTableForReplacement(body, spec);
+        if (!selection.IsSuccess)
+        {
+            skipped.Add($"{spec.Id}: {selection.Message}");
+            continue;
+        }
+
+        var table = selection.Table!;
+        if (!string.IsNullOrWhiteSpace(spec.TableStyleId))
+        {
+            EnsureTableStyle(table, spec.TableStyleId);
+        }
+
+        ReplaceTableRows(table, spec, selection.ColumnWidths, selection.EffectiveCellStyleId);
+        applied.Add($"{spec.Id}: table ordinal {selection.Ordinal} block {selection.BlockIndex} replaced with {spec.Rows.Count} row(s)");
+    }
+
+    doc.MainDocumentPart!.Document.Save();
+    WriteAppliedReport(reportPath, "Replace Table Report", docxPath, author, lockPath, applied, skipped);
+    foreach (var item in applied) Console.WriteLine($"APPLY {item}");
+    foreach (var item in skipped) Console.WriteLine($"SKIP {item}");
+    return skipped.Count == 0 ? 0 : 9;
+}
+
+static int ReplaceFiguresFromPlan(string docxPath, IReadOnlyDictionary<string, string> options)
+{
+    var author = ResolveMutationAuthor(docxPath, options);
+    if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
+        || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
+    {
+        Console.Error.WriteLine("Missing required options: --plan and --lock");
         return 4;
     }
 
@@ -3697,7 +4015,7 @@ static int ReplaceFiguresFromPlan(string docxPath, IReadOnlyDictionary<string, s
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools replace-figures-from-plan {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils replace-figures-from-plan {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3734,11 +4052,11 @@ static int ConvertTextFormulasToOfficeMath(string docxPath, IReadOnlyDictionary<
 
 static int ReplaceFormulasWithLinearOfficeMath(string docxPath, IReadOnlyDictionary<string, string> options, string commandName = "replace-formulas-with-linear-equations")
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author)
-        || !options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
+    var author = ResolveMutationAuthor(docxPath, options);
+    if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
         || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
     {
-        Console.Error.WriteLine("Missing required options: --plan, --author and --lock");
+        Console.Error.WriteLine("Missing required options: --plan and --lock");
         return 4;
     }
 
@@ -3767,7 +4085,7 @@ static int ReplaceFormulasWithLinearOfficeMath(string docxPath, IReadOnlyDiction
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools {commandName} {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils {commandName} {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -3801,11 +4119,11 @@ static int ReplaceFormulasWithLinearOfficeMath(string docxPath, IReadOnlyDiction
 
 static int ReplaceFormulasWithMathMlOfficeMath(string docxPath, IReadOnlyDictionary<string, string> options, string commandName = "replace-formulas-with-mathml-omml")
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author)
-        || !options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
+    var author = ResolveMutationAuthor(docxPath, options);
+    if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
         || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
     {
-        Console.Error.WriteLine("Missing required options: --plan, --author and --lock");
+        Console.Error.WriteLine("Missing required options: --plan and --lock");
         return 4;
     }
 
@@ -3832,7 +4150,7 @@ static int ReplaceFormulasWithMathMlOfficeMath(string docxPath, IReadOnlyDiction
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools {commandName} {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils {commandName} {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -4310,11 +4628,7 @@ static void SetDrawingExtent(Drawing drawing, long widthEmu, long heightEmu)
 
 static int EnableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -4330,7 +4644,7 @@ static int EnableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string,
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools enable-update-fields-on-open {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils enable-update-fields-on-open {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -4357,11 +4671,7 @@ static int EnableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string,
 
 static int DisableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -4377,7 +4687,7 @@ static int DisableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools disable-update-fields-on-open {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils disable-update-fields-on-open {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -5058,7 +5368,7 @@ static string BuildArticleAbntLayoutReport(
     builder.AppendLine($"- Documento: `{docxPath}`");
     builder.AppendLine($"- Lock: `{lockPath}`");
     builder.AppendLine($"- Autor da etapa: `{author}`");
-    builder.AppendLine($"- Utilitario/codigo usado: `D:\\docx_utils\\DocxOpenXmlTools`, comando `repair-article-abnt-layout` (.NET + Open XML)");
+    builder.AppendLine("- Utilitario/codigo usado: `docx-utils`, comando `repair-article-abnt-layout` (.NET + Open XML)");
     builder.AppendLine($"- Gerado em UTC: `{DateTime.UtcNow:O}`");
     builder.AppendLine();
     builder.AppendLine("## Aplicado");
@@ -5092,11 +5402,7 @@ static string BuildArticleAbntLayoutReport(
 
 static int RepairRefNumberOnly(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    if (!options.TryGetValue("author", out var author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -5113,7 +5419,7 @@ static int RepairRefNumberOnly(string docxPath, IReadOnlyDictionary<string, stri
     var applied = new List<string>();
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools repair-ref-number-only {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils repair-ref-number-only {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     WordprocessingDocument doc;
@@ -5590,7 +5896,7 @@ static string BuildCrossrefReport(
     builder.AppendLine();
     builder.AppendLine($"- VersÃ£o de entrada: `{plan.InputPath}`");
     builder.AppendLine($"- VersÃ£o de saÃ­da: `{docxPath}`");
-    builder.AppendLine("- UtilitÃ¡rio/cÃ³digo usado: `D:\\docx_utils\\DocxOpenXmlTools`, comando `apply-crossrefs` (.NET + Open XML)");
+    builder.AppendLine("- UtilitÃ¡rio/cÃ³digo usado: `docx-utils`, comando `apply-crossrefs` (.NET + Open XML)");
     builder.AppendLine($"- Plano usado: `{plan.PlanPath}`");
     builder.AppendLine($"- Lock usado: `{lockPath}`");
     builder.AppendLine($"- Autor das revisÃµes: `{author}`");
@@ -5618,8 +5924,8 @@ static string BuildCrossrefReport(
 
     builder.AppendLine();
     builder.AppendLine("## ValidaÃ§Ã£o executada");
-    builder.AppendLine("- Executar apÃ³s a aplicaÃ§Ã£o: `dotnet run --project D:\\docx_utils\\DocxOpenXmlTools\\DocxOpenXmlTools.csproj -- validate <saida.docx>`.");
-    builder.AppendLine("- Executar apÃ³s a aplicaÃ§Ã£o: `dotnet run --project D:\\docx_utils\\DocxOpenXmlTools\\DocxOpenXmlTools.csproj -- structure-audit <saida.docx> --out <json>`.");
+    builder.AppendLine("- Executar apÃ³s a aplicaÃ§Ã£o: `docx-utils validate <saida.docx>`.");
+    builder.AppendLine("- Executar apÃ³s a aplicaÃ§Ã£o: `docx-utils structure-audit <saida.docx> --out <json>`.");
     builder.AppendLine();
     builder.AppendLine("## Riscos remanescentes");
     builder.AppendLine("- O arquivo de entrada nÃ£o continha campos `SEQ` em legendas de tabela/figura; o utilitÃ¡rio inseriu campos novos apenas nas legendas planejadas e revalidadas.");
@@ -5695,6 +6001,318 @@ static Table? FindTableAfterCaption(IReadOnlyList<OpenXmlElement> blocks, string
     }
 
     return null;
+}
+
+static TableReplacementSelectionResult SelectTableForReplacement(Body body, ReplaceTableSpec spec)
+{
+    var blocks = body.ChildElements
+        .Where(e => e is Paragraph or Table)
+        .ToList();
+
+    var tables = new List<TableReplacementSelectionResult>();
+    var ordinal = 0;
+    for (var i = 0; i < blocks.Count; i++)
+    {
+        if (blocks[i] is not Table table)
+        {
+            continue;
+        }
+
+        ordinal++;
+        var previousParagraphText = string.Empty;
+        for (var j = i - 1; j >= 0; j--)
+        {
+            if (blocks[j] is Paragraph paragraph)
+            {
+                previousParagraphText = ParagraphText(paragraph);
+                break;
+            }
+        }
+
+        var nextParagraphText = string.Empty;
+        for (var j = i + 1; j < blocks.Count; j++)
+        {
+            if (blocks[j] is Paragraph paragraph)
+            {
+                nextParagraphText = ParagraphText(paragraph);
+                break;
+            }
+        }
+
+        tables.Add(new TableReplacementSelectionResult(
+            true,
+            "",
+            table,
+            ordinal,
+            i + 1,
+            FirstNonEmptyTableText(table),
+            previousParagraphText,
+            nextParagraphText,
+            ResolveReplacementTableColumnWidths(table, GetCurrentTableColumnCount(table)),
+            ""));
+    }
+
+    IEnumerable<TableReplacementSelectionResult> matches = tables;
+    if (spec.Ordinal is int ordinalSelector and > 0)
+    {
+        matches = matches.Where(t => t.Ordinal == ordinalSelector);
+    }
+
+    if (spec.BlockIndex is int blockIndexSelector and > 0)
+    {
+        matches = matches.Where(t => t.BlockIndex == blockIndexSelector);
+    }
+
+    if (spec.Block is int blockSelector and > 0)
+    {
+        matches = matches.Where(t => t.BlockIndex == blockSelector);
+    }
+
+    if (!string.IsNullOrWhiteSpace(spec.FirstCellText))
+    {
+        matches = matches.Where(t => NormalizedStartsWith(t.FirstCellText, spec.FirstCellText));
+    }
+
+    if (!string.IsNullOrWhiteSpace(spec.PreviousParagraphPrefix))
+    {
+        matches = matches.Where(t => NormalizedStartsWith(t.PreviousParagraphText, spec.PreviousParagraphPrefix));
+    }
+
+    if (!string.IsNullOrWhiteSpace(spec.NextParagraphPrefix))
+    {
+        matches = matches.Where(t => NormalizedStartsWith(t.NextParagraphText, spec.NextParagraphPrefix));
+    }
+
+    var filtered = matches.ToList();
+    if (filtered.Count == 0)
+    {
+        return new TableReplacementSelectionResult(false, BuildReplacementTableNotFoundReason(spec, tables), null, 0, 0, "", "", "", [], "");
+    }
+
+    if (filtered.Count > 1)
+    {
+        return new TableReplacementSelectionResult(false, BuildReplacementTableAmbiguousReason(spec, filtered), null, 0, 0, "", "", "", [], "");
+    }
+
+    var selected = filtered[0];
+    return new TableReplacementSelectionResult(
+        true,
+        "",
+        selected.Table,
+        selected.Ordinal,
+        selected.BlockIndex,
+        selected.FirstCellText,
+        selected.PreviousParagraphText,
+        selected.NextParagraphText,
+        selected.ColumnWidths,
+        ResolveReplacementCellStyleId(selected.Table!, spec));
+}
+
+static string BuildReplacementTableNotFoundReason(ReplaceTableSpec spec, IReadOnlyList<TableReplacementSelectionResult> tables)
+{
+    var selector = DescribeTableSelector(spec);
+    if (tables.Count == 0)
+    {
+        return $"{selector}: no tables found";
+    }
+
+    return $"{selector}: no matching table";
+}
+
+static string BuildReplacementTableAmbiguousReason(ReplaceTableSpec spec, IReadOnlyList<TableReplacementSelectionResult> tables)
+{
+    var selector = DescribeTableSelector(spec);
+    return $"{selector}: matched {tables.Count} tables";
+}
+
+static string DescribeTableSelector(ReplaceTableSpec spec)
+{
+    var parts = new List<string>();
+    if (spec.Ordinal is int ordinal and > 0)
+    {
+        parts.Add($"ordinal={ordinal}");
+    }
+    if (spec.BlockIndex is int blockIndex and > 0)
+    {
+        parts.Add($"blockIndex={blockIndex}");
+    }
+    if (spec.Block is int block and > 0)
+    {
+        parts.Add($"block={block}");
+    }
+    if (!string.IsNullOrWhiteSpace(spec.FirstCellText))
+    {
+        parts.Add($"firstCellText={spec.FirstCellText}");
+    }
+    if (!string.IsNullOrWhiteSpace(spec.PreviousParagraphPrefix))
+    {
+        parts.Add($"previousParagraphPrefix={spec.PreviousParagraphPrefix}");
+    }
+    if (!string.IsNullOrWhiteSpace(spec.NextParagraphPrefix))
+    {
+        parts.Add($"nextParagraphPrefix={spec.NextParagraphPrefix}");
+    }
+
+    return parts.Count == 0 ? "selector" : $"selector({string.Join(", ", parts)})";
+}
+
+static bool HasTableSelector(ReplaceTableSpec spec) =>
+    (spec.Ordinal is > 0)
+    || (spec.BlockIndex is > 0)
+    || (spec.Block is > 0)
+    || !string.IsNullOrWhiteSpace(spec.FirstCellText)
+    || !string.IsNullOrWhiteSpace(spec.PreviousParagraphPrefix)
+    || !string.IsNullOrWhiteSpace(spec.NextParagraphPrefix);
+
+static IReadOnlyList<int> ResolveReplacementTableColumnWidths(Table table, int columnCount)
+{
+    if (columnCount <= 0)
+    {
+        return [];
+    }
+
+    var widths = table.GetFirstChild<TableGrid>()?.Elements<GridColumn>()
+        .Select(c => ParseTableWidth(c.Width?.Value))
+        .Where(width => width > 0)
+        .ToList() ?? [];
+
+    if (widths.Count == 0)
+    {
+        var firstRow = table.Elements<TableRow>().FirstOrDefault();
+        if (firstRow is not null)
+        {
+            widths = firstRow.Elements<TableCell>()
+                .Select(cell => ParseTableWidth(cell.TableCellProperties?.TableCellWidth?.Width?.Value))
+                .Where(width => width > 0)
+                .ToList();
+        }
+    }
+
+    if (widths.Count == 0)
+    {
+        return Enumerable.Repeat(Math.Max(1200, 9000 / Math.Max(1, columnCount)), columnCount).ToList();
+    }
+
+    if (widths.Count == columnCount)
+    {
+        return widths;
+    }
+
+    if (widths.Count > columnCount)
+    {
+        return widths.Take(columnCount).ToList();
+    }
+
+    var extended = new List<int>(widths);
+    var fillWidth = widths.LastOrDefault(Math.Max(1200, 9000 / Math.Max(1, columnCount)));
+    while (extended.Count < columnCount)
+    {
+        extended.Add(fillWidth);
+    }
+
+    return extended;
+}
+
+static int ParseTableWidth(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return 0;
+    }
+
+    return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+        ? parsed
+        : 0;
+}
+
+static int GetCurrentTableColumnCount(Table table)
+{
+    var row = table.Elements<TableRow>().FirstOrDefault();
+    if (row is null)
+    {
+        return table.GetFirstChild<TableGrid>()?.Elements<GridColumn>().Count() ?? 0;
+    }
+
+    var columns = row.Elements<TableCell>()
+        .Sum(cell => cell.TableCellProperties?.GridSpan?.Val?.Value ?? 1);
+    if (columns > 0)
+    {
+        return columns;
+    }
+
+    return table.GetFirstChild<TableGrid>()?.Elements<GridColumn>().Count() ?? 0;
+}
+
+static string ResolveReplacementCellStyleId(Table table, ReplaceTableSpec spec)
+{
+    if (!string.IsNullOrWhiteSpace(spec.CellStyleId))
+    {
+        return spec.CellStyleId;
+    }
+
+    return table.Descendants<Paragraph>()
+        .Select(ParagraphStyleId)
+        .FirstOrDefault(style => !string.IsNullOrWhiteSpace(style))
+        ?? "";
+}
+
+static void ReplaceTableRows(Table table, ReplaceTableSpec spec, IReadOnlyList<int> columnWidths, string cellStyleId)
+{
+    var columnCount = spec.Rows.Select(row => row?.Count ?? 0).DefaultIfEmpty(0).Max();
+    var effectiveWidths = columnWidths.Count == columnCount
+        ? columnWidths
+        : ResolveReplacementTableColumnWidths(table, columnCount);
+
+    foreach (var row in table.Elements<TableRow>().ToList())
+    {
+        row.Remove();
+    }
+
+    foreach (var oldGrid in table.Elements<TableGrid>().ToList())
+    {
+        oldGrid.Remove();
+    }
+
+    var grid = new TableGrid();
+    foreach (var width in effectiveWidths)
+    {
+        grid.Append(new GridColumn { Width = width.ToString(CultureInfo.InvariantCulture) });
+    }
+
+    var properties = table.GetFirstChild<TableProperties>();
+    if (properties is not null)
+    {
+        table.InsertAfter(grid, properties);
+    }
+    else
+    {
+        table.PrependChild(grid);
+    }
+
+    foreach (var rowValues in spec.Rows)
+    {
+        var row = new TableRow();
+        for (var i = 0; i < columnCount; i++)
+        {
+            var width = effectiveWidths.Count > i ? effectiveWidths[i] : effectiveWidths.LastOrDefault(2400);
+            var cell = new TableCell(new TableCellProperties(new TableCellWidth
+            {
+                Width = width.ToString(CultureInfo.InvariantCulture),
+                Type = TableWidthUnitValues.Dxa
+            }));
+            var paragraph = new Paragraph();
+            if (!string.IsNullOrWhiteSpace(cellStyleId))
+            {
+                paragraph.Append(new ParagraphProperties(new ParagraphStyleId { Val = cellStyleId }));
+            }
+            NormalizeTableParagraph(paragraph);
+            paragraph.Append(CreateTextRun(i < rowValues.Count ? rowValues[i] ?? "" : ""));
+            cell.Append(paragraph);
+            row.Append(cell);
+        }
+
+        table.Append(row);
+    }
 }
 
 static int ApplyParagraphStyleInsideTable(Table table, string styleId)
@@ -5883,17 +6501,13 @@ static string BuildRefNumberOnlyReport(
 
 static int InsertFigures(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -5931,7 +6545,7 @@ static int InsertFigures(string docxPath, IReadOnlyDictionary<string, string> op
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools insert-figures {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils insert-figures {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     WordprocessingDocument doc;
@@ -6092,17 +6706,13 @@ static int InsertFigures(string docxPath, IReadOnlyDictionary<string, string> op
 
 static int InsertComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -6139,7 +6749,7 @@ static int InsertComments(string docxPath, IReadOnlyDictionary<string, string> o
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools insert-comments {DateTime.UtcNow:O}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils insert-comments {DateTime.UtcNow:O}\n"));
     lockStream.Flush();
 
     WordprocessingDocument doc;
@@ -6427,17 +7037,13 @@ static bool ReanchorCommentOnParagraph(MainDocumentPart mainPart, string comment
 
 static int ReanchorComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -6474,7 +7080,7 @@ static int ReanchorComments(string docxPath, IReadOnlyDictionary<string, string>
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools reanchor-comments {DateTime.UtcNow:O} author={author}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils reanchor-comments {DateTime.UtcNow:O} author={author}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -6559,17 +7165,13 @@ static int ReanchorComments(string docxPath, IReadOnlyDictionary<string, string>
 
 static int AnswerComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -6607,7 +7209,7 @@ static int AnswerComments(string docxPath, IReadOnlyDictionary<string, string> o
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools answer-comments {DateTime.UtcNow:O} author={author}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils answer-comments {DateTime.UtcNow:O} author={author}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -6724,6 +7326,7 @@ static string NextUniqueHexValue(HashSet<string> existing, int hexLength = 8)
 
 static int ReplyComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
 
     if (!options.TryGetValue("plan", out var planPathValue))
     {
@@ -6731,11 +7334,6 @@ static int ReplyComments(string docxPath, IReadOnlyDictionary<string, string> op
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -6773,7 +7371,7 @@ static int ReplyComments(string docxPath, IReadOnlyDictionary<string, string> op
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools reply-comments {DateTime.UtcNow:O} author={author}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils reply-comments {DateTime.UtcNow:O} author={author}\n"));
     lockStream.Flush();
 
     using var doc = WordprocessingDocument.Open(docxPath, true);
@@ -6949,17 +7547,13 @@ static int ReplyComments(string docxPath, IReadOnlyDictionary<string, string> op
 
 static int RemoveComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
+    var author = ResolveMutationAuthor(docxPath, options);
     if (!options.TryGetValue("ids", out var idsValue) || string.IsNullOrWhiteSpace(idsValue))
     {
         Console.Error.WriteLine("Missing required option: --ids");
         return 4;
     }
 
-    if (!options.TryGetValue("author", out var author) || string.IsNullOrWhiteSpace(author))
-    {
-        Console.Error.WriteLine("Missing required option: --author");
-        return 4;
-    }
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -6975,7 +7569,7 @@ static int RemoveComments(string docxPath, IReadOnlyDictionary<string, string> o
 
     using var lockStream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     lockStream.SetLength(0);
-    lockStream.Write(Encoding.UTF8.GetBytes($"DocxOpenXmlTools remove-comments {DateTime.UtcNow:O} author={author}\n"));
+    lockStream.Write(Encoding.UTF8.GetBytes($"docx-utils remove-comments {DateTime.UtcNow:O} author={author}\n"));
     lockStream.Flush();
 
     var removed = new List<string>();
@@ -8837,6 +9431,118 @@ static string ElementText(OpenXmlElement element)
     return Regex.Replace(string.Concat(pieces), "\\s+", " ").Trim();
 }
 
+static void WriteCommentsJson(IReadOnlyList<CommentListEntry> entries)
+{
+    var payload = new
+    {
+        comments = entries.Select(entry => new
+        {
+            id = entry.Id,
+            autor = entry.Author,
+            conteudo = entry.Text,
+            orientacao = "",
+            data = entry.Date,
+            ancora = string.IsNullOrWhiteSpace(entry.AnchorText) ? null : entry.AnchorText,
+            parentCommentId = entry.ParentCommentId
+        })
+    };
+    Console.WriteLine(JsonSerializer.Serialize(payload, JsonOptionsIndented()));
+}
+
+static TabularOutput BuildCommentsOutputTable(IReadOnlyList<CommentListEntry> entries, bool includeIndex) =>
+    includeIndex
+        ? new(
+            ["(index)", "id", "autor", "conteudo", "orientacao"],
+            entries.Select((entry, index) => new[]
+            {
+                index.ToString(CultureInfo.InvariantCulture),
+                entry.Id,
+                entry.Author,
+                entry.Text,
+                ""
+            }).ToList())
+        : new(
+            ["id", "autor", "conteudo", "orientacao"],
+            entries.Select(entry => new[] { entry.Id, entry.Author, entry.Text, "" }).ToList());
+
+static void WriteTabularOutput(TabularOutput table, string format)
+{
+    if (format is "table" or "console" or "console-table")
+    {
+        WriteSpectreConsoleTable(table);
+        return;
+    }
+
+    if (format is "md" or "markdown")
+    {
+        Console.Write(BuildMarkdownTable(table));
+        return;
+    }
+
+    throw new ArgumentOutOfRangeException(nameof(format), format, "Unsupported tabular output format.");
+}
+
+static string BuildMarkdownTable(TabularOutput table)
+{
+    var builder = new StringBuilder();
+    AppendMarkdownRow(builder, table.Headers);
+    AppendMarkdownRow(builder, table.Headers.Select(_ => "---").ToArray());
+    foreach (var row in table.Rows)
+    {
+        AppendMarkdownRow(builder, row);
+    }
+
+    var markdown = builder.ToString();
+    _ = Markdown.Parse(markdown);
+    return markdown;
+}
+
+static void AppendMarkdownRow(StringBuilder builder, IReadOnlyList<string> cells)
+{
+    var sanitized = cells
+        .Select(cell => EscapeMarkdownTableCell(NormalizeTableCell(cell)));
+    builder.Append("| ");
+    builder.Append(string.Join(" | ", sanitized));
+    builder.AppendLine(" |");
+}
+
+static void WriteSpectreConsoleTable(TabularOutput output)
+{
+    var table = new Spectre.Console.Table
+    {
+        Border = Spectre.Console.TableBorder.Square,
+        ShowRowSeparators = true
+    };
+
+    foreach (var header in output.Headers)
+    {
+        table.AddColumn(new Spectre.Console.TableColumn(EscapeSpectreMarkup(NormalizeTableCell(header))));
+    }
+
+    foreach (var row in output.Rows)
+    {
+        Spectre.Console.TableExtensions.AddRow(table, row.Select(cell => EscapeSpectreMarkup(NormalizeTableCell(cell))).ToArray());
+    }
+
+    var console = Spectre.Console.AnsiConsole.Create(new Spectre.Console.AnsiConsoleSettings
+    {
+        Ansi = Spectre.Console.AnsiSupport.No,
+        ColorSystem = Spectre.Console.ColorSystemSupport.NoColors,
+        Out = new Spectre.Console.AnsiConsoleOutput(Console.Out)
+    });
+    console.Write(table);
+}
+
+static string NormalizeTableCell(string? value) =>
+    Regex.Replace(value ?? "", "\\s+", " ").Trim();
+
+static string EscapeMarkdownTableCell(string value) =>
+    value.Replace("\\", "\\\\", StringComparison.Ordinal)
+        .Replace("|", "\\|", StringComparison.Ordinal);
+
+static string EscapeSpectreMarkup(string value) =>
+    Spectre.Console.Markup.Escape(value);
+
 static string GetRevisionAuthor(OpenXmlElement element) => element switch
 {
     InsertedRun inserted => inserted.Author?.Value ?? "",
@@ -8855,7 +9561,8 @@ static IReadOnlyList<string> GetDistinctAuthors(WordprocessingDocument doc)
 {
     var mainPart = doc.MainDocumentPart ?? throw new InvalidOperationException("No main document part.");
     var authors = new List<string>();
-    var seen = new HashSet<string>(StringComparer.Ordinal);
+    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    const string wordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
     void AddAuthor(string? author)
     {
@@ -8878,9 +9585,13 @@ static IReadOnlyList<string> GetDistinctAuthors(WordprocessingDocument doc)
             continue;
         }
 
-        foreach (var revision in part.RootElement.Descendants<OpenXmlElement>().Where(e => e is InsertedRun or DeletedRun))
+        foreach (var element in part.RootElement.Descendants<OpenXmlElement>().Prepend(part.RootElement))
         {
-            AddAuthor(GetRevisionAuthor(revision));
+            AddAuthor(element.GetAttributes()
+                .FirstOrDefault(attribute =>
+                    string.Equals(attribute.LocalName, "author", StringComparison.Ordinal)
+                    && string.Equals(attribute.NamespaceUri, wordprocessingNamespace, StringComparison.Ordinal))
+                .Value);
         }
     }
 
@@ -9322,6 +10033,25 @@ sealed record ParagraphEditPlan
     public IReadOnlyList<ParagraphEditSpec> Edits { get; init; } = [];
 }
 
+sealed record ReplaceTablePlan
+{
+    public IReadOnlyList<ReplaceTableSpec> Tables { get; init; } = [];
+}
+
+sealed record ReplaceTableSpec
+{
+    public string Id { get; init; } = "";
+    public int? Ordinal { get; init; }
+    public int? Block { get; init; }
+    public int? BlockIndex { get; init; }
+    public string FirstCellText { get; init; } = "";
+    public string PreviousParagraphPrefix { get; init; } = "";
+    public string NextParagraphPrefix { get; init; } = "";
+    public string? TableStyleId { get; init; }
+    public string? CellStyleId { get; init; }
+    public IReadOnlyList<IReadOnlyList<string?>> Rows { get; init; } = [];
+}
+
 sealed record EquationRewritePlan
 {
     public IReadOnlyList<EquationRewriteSpec> Edits { get; init; } = [];
@@ -9345,6 +10075,18 @@ sealed record ParagraphEditSpec
 }
 
 sealed record ParagraphEntry(Paragraph Paragraph, int Index, string Text);
+
+sealed record TableReplacementSelectionResult(
+    bool IsSuccess,
+    string Message,
+    Table? Table,
+    int Ordinal,
+    int BlockIndex,
+    string FirstCellText,
+    string PreviousParagraphText,
+    string NextParagraphText,
+    IReadOnlyList<int> ColumnWidths,
+    string EffectiveCellStyleId);
 
 sealed record RunningTextEligibilityResult(bool IsEligible, string Reason);
 
@@ -9661,6 +10403,10 @@ sealed record FormulaReplacement(int Start, int Length, FormulaSpec Spec);
 
 sealed record ReferenceTitleSpec(string Id, string ReferencePrefix, string TitleToEmphasize);
 
+sealed record TabularOutput(IReadOnlyList<string> Headers, IReadOnlyList<IReadOnlyList<string>> Rows);
+
+sealed record CommentListEntry(string Id, string Author, string Date, string? ParentCommentId, string Text, string AnchorText);
+
 sealed record CommentInsertionPlan
 {
     public IReadOnlyList<CommentSpec> Comments { get; init; } = [];
@@ -9724,4 +10470,6 @@ sealed class RevisionMetadata(string author, DateTime dateUtc)
 
     public StringValue NextRevisionId() => (_counter++).ToString(CultureInfo.InvariantCulture);
 }
+
+
 

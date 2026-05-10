@@ -18,11 +18,12 @@
 
 ## DOCX Revision And Comment Authors
 
-- When the main thread adds a revision or comment to a `.docx`, it must explicitly set the author and must never use technical labels such as `main`, `root`, `assistant`, or `codex`.
-- The main thread must choose one of these authors: `Ultron`, `Brainiac`, `Vision`, `C3PO`, `R2D2`, or `Jarvis`.
-- Before adding comments or revisions, run the `$docx-utils` `list-authors` command on the target `.docx` to check which authors already exist in the document.
-- First choose an allowed name that does not yet exist in the document.
-- If all allowed names already exist, reuse the allowed list with a numeric `-n` suffix and choose the first name/suffix that does not yet exist; example: `Ultron-1`.
+- For any reading, inspection, editing, rewriting, validation, synchronization, revision, comment, or other operation that touches a `.docx`, use the `docx-utils` skill/tooling.
+- Execute `docx-utils` through the published binary/shim by default; do not use `dotnet run --project` unless developing, debugging, or recovering from a broken/missing binary.
+- If the needed `docx-utils` capability fails, run `docx-utils --help` to review available commands, calling forms, and examples.
+- If no command exists for the needed DOCX operation, log the missing capability in the `docx-utils` skill backlog for future implementation by the skill maintainer/agent maintainer.
+- When the main thread adds a revision or comment to a `.docx` through `docx-utils`, it must omit `--author`; `docx-utils` automatically chooses the next available author in the document.
+- Subagents that add revisions or comments to a `.docx` must pass `--author` explicitly with the assigned subagent name.
 
 ## Codex project initialization
 

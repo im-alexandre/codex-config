@@ -215,6 +215,19 @@ foreach ($project in $projectFiles) {
   Invoke-DotNet -Arguments @('build', $project, '--configuration', $Configuration, '--no-restore') -WorkingDirectory $SkillRoot
 }
 
+$toolsProject = Join-Path $SkillRoot 'src\DocxOpenXmlTools\DocxOpenXmlTools.csproj'
+$packageDir = Join-Path $SkillRoot 'bin\docx-utils'
+Write-Status "publish: DocxOpenXmlTools [$Configuration] -> $packageDir"
+Invoke-DotNet -Arguments @('publish', $toolsProject, '--configuration', $Configuration, '--no-restore', '--output', $packageDir) -WorkingDirectory $SkillRoot
+
+foreach ($staleWrapper in @('docx-comments.mjs', 'docx-comments.cmd')) {
+  $stalePath = Join-Path $packageDir $staleWrapper
+  if (Test-Path $stalePath) {
+    Remove-Item -LiteralPath $stalePath -Force
+    Write-Status "wrapper obsoleto removido: $staleWrapper"
+  }
+}
+
 $testProjectsRun = 0
 $testStatus = 'executados'
 if (-not $SkipTests) {
