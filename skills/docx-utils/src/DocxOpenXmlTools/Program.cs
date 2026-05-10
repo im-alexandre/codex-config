@@ -1838,21 +1838,6 @@ static string ResolveCommentsFormat(string? formatValue)
 
 static string DetectCodexSurface()
 {
-    var overrideValue = Environment.GetEnvironmentVariable("DOCX_UTILS_SURFACE");
-    if (string.IsNullOrWhiteSpace(overrideValue))
-    {
-        overrideValue = Environment.GetEnvironmentVariable("CODEX_SURFACE");
-    }
-
-    if (overrideValue is not null)
-    {
-        var normalized = Normalize(overrideValue);
-        if (normalized is "cli" or "app")
-        {
-            return normalized;
-        }
-    }
-
     if (string.Equals(Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_NPM"), "1", StringComparison.Ordinal))
     {
         return "cli";
@@ -8389,8 +8374,6 @@ static Paragraph CreateInsertedParagraph(Paragraph template, string text, Revisi
         paragraph.Append((ParagraphProperties)template.ParagraphProperties.CloneNode(true));
     }
 
-    paragraph.ParagraphId = HexBinaryValue.FromString(RandomHex(8));
-    paragraph.TextId = HexBinaryValue.FromString(RandomHex(8));
     paragraph.RsidParagraphAddition = template.RsidParagraphAddition;
     paragraph.RsidParagraphProperties = template.RsidParagraphProperties;
     paragraph.RsidRunAdditionDefault = template.RsidRunAdditionDefault;
@@ -8458,8 +8441,6 @@ static Paragraph CreateInsertedEquationParagraph(Paragraph template, string late
         currentStyle.Val = styleId;
     }
 
-    paragraph.ParagraphId = HexBinaryValue.FromString(RandomHex(8));
-    paragraph.TextId = HexBinaryValue.FromString(RandomHex(8));
     paragraph.RsidParagraphAddition = template.RsidParagraphAddition;
     paragraph.RsidParagraphProperties = template.RsidParagraphProperties;
     paragraph.RsidRunAdditionDefault = template.RsidRunAdditionDefault;
@@ -10661,6 +10642,4 @@ sealed class RevisionMetadata(string author, DateTime dateUtc)
 
     public StringValue NextRevisionId() => (_counter++).ToString(CultureInfo.InvariantCulture);
 }
-
-
 

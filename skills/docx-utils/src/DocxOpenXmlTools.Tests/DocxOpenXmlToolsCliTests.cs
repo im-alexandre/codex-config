@@ -364,7 +364,7 @@ public sealed class DocxOpenXmlToolsCliTests
 
         var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- comments \"{docxPath}\"", skillRoot, new Dictionary<string, string?>
         {
-            ["DOCX_UTILS_SURFACE"] = "cli"
+            ["CODEX_MANAGED_BY_NPM"] = "1"
         });
 
         Assert.True(result.ExitCode == 0, result.CombinedOutput);
@@ -392,7 +392,7 @@ public sealed class DocxOpenXmlToolsCliTests
 
         var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- comments \"{docxPath}\"", skillRoot, new Dictionary<string, string?>
         {
-            ["DOCX_UTILS_SURFACE"] = "app"
+            ["CODEX_MANAGED_BY_NPM"] = "0"
         });
 
         Assert.True(result.ExitCode == 0, result.CombinedOutput);
@@ -401,9 +401,9 @@ public sealed class DocxOpenXmlToolsCliTests
     }
 
     [Theory]
-    [InlineData("cli", "┌", "| id | autor | conteudo | orientacao |")]
-    [InlineData("app", "| id | autor | conteudo | orientacao |", "┌")]
-    public async Task Comments_explicit_auto_forces_format_from_surface(string surface, string expected, string unexpected)
+    [InlineData("1", "┌", "| id | autor | conteudo | orientacao |")]
+    [InlineData("0", "| id | autor | conteudo | orientacao |", "┌")]
+    public async Task Comments_explicit_auto_forces_format_from_surface(string managedByNpm, string expected, string unexpected)
     {
         var skillRoot = FindSkillRoot();
         var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
@@ -414,7 +414,7 @@ public sealed class DocxOpenXmlToolsCliTests
 
         var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- comments \"{docxPath}\" --format auto", skillRoot, new Dictionary<string, string?>
         {
-            ["DOCX_UTILS_SURFACE"] = surface
+            ["CODEX_MANAGED_BY_NPM"] = managedByNpm
         });
 
         Assert.True(result.ExitCode == 0, result.CombinedOutput);

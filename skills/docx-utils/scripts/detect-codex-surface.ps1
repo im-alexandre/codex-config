@@ -3,18 +3,9 @@ param(
   [switch]$Json
 )
 
-$override = $env:DOCX_UTILS_SURFACE
-if (-not $override) {
-  $override = $env:CODEX_SURFACE
-}
-
-$surface = $null
 $reason = $null
 
-if ($override -match '^(cli|app)$') {
-  $surface = $override.ToLowerInvariant()
-  $reason = "override"
-} elseif ($env:CODEX_MANAGED_BY_NPM -eq '1') {
+if ($env:CODEX_MANAGED_BY_NPM -eq '1') {
   $surface = 'cli'
   $reason = 'codex-npm'
 } else {
