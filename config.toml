@@ -95,6 +95,12 @@ trust_level = "trusted"
 [projects.'d:\financas']
 trust_level = "trusted"
 
+[projects."/home/imale"]
+trust_level = "trusted"
+
+[projects."/home/imale/.codex"]
+trust_level = "trusted"
+
 [windows]
 sandbox = "elevated"
 
