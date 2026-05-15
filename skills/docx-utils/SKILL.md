@@ -46,8 +46,16 @@ Use esta skill quando precisar trabalhar com utilitários .NET para inspeção, 
 - `bin/docx-utils/docx-utils.exe` ou `bin/docx-utils/docx-utils`: binário publicado preferencial para execução operacional.
 - `scripts/detect-codex-surface.ps1` / `scripts/detect-codex-surface.sh`: detecta se a sessão atual parece `cli` ou `app`.
 - `BACKLOG.md`: registro de lacunas de comandos/recursos para implementação futura.
+- `agents/mantenedor-dotnet-docx.md`: papel especializado para manutenção .NET/Open XML com TDD, xUnit, contratos CLI e validação por binário publicado.
+- `agents/dotnet-docx-maintainer.yaml`: manifesto de descoberta do agente mantenedor .NET DOCX.
 - `references/plan-contracts.md`: contratos minimos e exemplos JSON para `create-docx`, `insert-blocks`, `replace-blocks` e `replace-table`.
 - `references/plan-contracts.json`: fonte machine-readable dos contratos operacionais.
+
+## Agentes
+
+- Use `agents/mantenedor-dotnet-docx.md` quando a tarefa envolver implementação, depuração, testes, revisão ou manutenção da fonte .NET em `src/`.
+- O agente mantenedor deve combinar as skills `dotnet-cli`, `csharp`, `xunit-tdd`, `openxml-sdk`, `docx-cli-contracts`, `nuget-msbuild`, `published-binary-first` e `cross-platform-installers`.
+- Para tarefas operacionais em DOCX, continue seguindo a regra principal desta skill: use o binário publicado `docx-utils` por padrão.
 
 ## Planos de blocos e tabelas
 
@@ -97,4 +105,5 @@ Use esta skill quando precisar trabalhar com utilitários .NET para inspeção, 
 - Na thread principal, omita `--author` em comandos mutadores; o `docx-utils` escolhe automaticamente o próximo autor disponível no DOCX.
 - A lista automática usada pela thread principal é: `Ultron`, `Brainiac`, `Jarvis`, `Vision`, `HumanTorch`, `Friday`, `C3PO`, `R2D2`.
 - Se todos os nomes-base já existirem, o utilitário tenta a mesma lista com sufixos numéricos (`Ultron-1`, `Brainiac-1`, etc.).
+- Use `docx-utils next-author <docx>` quando quiser apenas descobrir, sem mutar, qual será o próximo autor livre.
 - Em subagents, informe sempre `--author` com o nome atribuído ao subagent.

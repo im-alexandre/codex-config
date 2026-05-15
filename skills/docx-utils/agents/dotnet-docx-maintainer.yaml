@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mantenedor .NET DOCX"
+  short_description: "Mantem a fonte .NET/Open XML do docx-utils com TDD, xUnit e contratos CLI."
+  default_prompt: "Use $docx-utils com agents/mantenedor-dotnet-docx.md para desenvolver, testar ou revisar a fonte .NET. Priorize TDD com xUnit, Open XML SDK, contratos plan-contracts e uso operacional pelo binario publicado."

@@ -1,13 +1,15 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Xsl;
+using DocxOpenXmlTools.Cli;
+using DocxOpenXmlTools.PlanContracts;
+using DocxOpenXmlTools.Mutation;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using W15 = DocumentFormat.OpenXml.Office2013.Word;
@@ -21,7 +23,7 @@ using M = DocumentFormat.OpenXml.Math;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-if (args.Length == 1 && IsHelpArgument(args[0]))
+if (args.Length == 1 && CliOptions.IsHelpArgument(args[0]))
 {
     PrintUsage();
     return 0;
@@ -43,15 +45,7 @@ if (command is "help" or "-h" or "--help" or "/?")
 
 if (command is "plan-contracts" or "plan-contract")
 {
-    var targetCommand = args.Length >= 2 && !args[1].StartsWith('-')
-        ? args[1].Trim().ToLowerInvariant()
-        : null;
-    var optionOffset = targetCommand is null ? 1 : 2;
-    var contractOptions = ParseOptions(args.Skip(optionOffset).ToArray());
-    var format = contractOptions.TryGetValue("format", out var formatValue) && !string.IsNullOrWhiteSpace(formatValue)
-        ? formatValue.Trim().ToLowerInvariant()
-        : "markdown";
-    return PlanContractSupport.PrintPlanContracts(targetCommand, format);
+    return PlanContractCommands.PrintPlanContracts(args.Skip(1).ToArray());
 }
 
 if (command is "create-article")
@@ -72,15 +66,13 @@ if (command is "create-docx")
 
 if (command is "validate-plan")
 {
-    if (args.Length < 3)
+    if (args.Length < 2)
     {
         PrintUsage();
         return 1;
     }
 
-    var targetCommand = args[1].Trim().ToLowerInvariant();
-    var validationOptions = ParseOptions(args.Skip(2).ToArray());
-    return ValidatePlan(targetCommand, validationOptions);
+    return PlanContractCommands.ValidatePlan(args.Skip(1).ToArray());
 }
 
 if (args.Length < 2)
@@ -97,7 +89,7 @@ if (!File.Exists(docxPath))
     return 2;
 }
 
-var commandOptions = ParseOptions(args.Skip(2).ToArray());
+var commandOptions = CliOptions.Parse(args.Skip(2).ToArray());
 
 return command switch
 {
@@ -112,6 +104,7 @@ return command switch
     "revisions" => ListRevisions(docxPath, commandOptions),
     "comments" => ListComments(docxPath, commandOptions),
     "comment-anchors" => ListCommentAnchors(docxPath, commandOptions),
+    "next-author" => NextAuthor(docxPath),
     "validate" => Validate(docxPath),
     "export-used-styles" => ExportUsedStyles(docxPath, commandOptions),
     "ensure-canonical-styles" => EnsureCanonicalStylesCommand(docxPath, commandOptions),
@@ -270,7 +263,7 @@ static int AcceptRevisions(string docxPath, IReadOnlyDictionary<string, string> 
 
 static int AppendParagraphs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("--plan is required");
@@ -374,10 +367,11 @@ static int UnknownCommand(string command)
     return 3;
 }
 
-static bool IsHelpArgument(string value)
+static int NextAuthor(string docxPath)
 {
-    var normalized = value.Trim().ToLowerInvariant();
-    return normalized is "help" or "-h" or "--help" or "/?";
+    var author = MutationAuthorResolver.Resolve(docxPath, new Dictionary<string, string>());
+    Console.WriteLine(author);
+    return 0;
 }
 
 static void PrintUsage()
@@ -397,12 +391,13 @@ Notas gerais:
   - Subagents devem passar --author com o nome atribuido ao subagent.
   - Planos JSON devem ser arquivos no formato esperado pelo comando; use --report md para gerar um relatorio auditavel quando disponivel.
   - A listagem externa de autores foi removida; a leitura de autores existe apenas como logica interna do autor automatico.
+  - `next-author <docx>` imprime o proximo autor livre sem mutar o documento.
   - `create-article` delega ao comportamento exato do binario `ArticleDocxBuilder`.
   - `create-docx` cria um DOCX vazio quando chamado sem `--plan` e usa um plano JSON quando informado.
 
 Planos de blocos e tabelas:
   - plan-contracts [comando] [--format markdown|json] expõe os contratos operacionais de planos sem ler a implementacao.
-  - validate-plan <comando> --plan <json> valida o contrato JSON antes de mutar o DOCX.
+  - validate-plan <comando> --plan <json> valida o contrato JSON de create-docx, insert-blocks, replace-blocks ou replace-table antes de mutar o DOCX.
   - insert-blocks, replace-blocks e replace-table seguem os contratos publicados em references/plan-contracts.md e references/plan-contracts.json.
   - replace-blocks remove o intervalo entre `afterPrefix` e `beforePrefix` e insere parágrafos/tabelas declarativamente no lugar.
   - Veja references/plan-contracts.md e references/plan-contracts.json para os contratos minimos e exemplos JSON completos.
@@ -462,6 +457,10 @@ Inspecao e auditoria:
   comment-anchors <docx>
     Lista paragrafos que possuem marcadores de comentario e os IDs associados.
     Exemplo: docx-utils comment-anchors tese.docx
+
+  next-author <docx>
+    Mostra, sem mutar o DOCX, o proximo nome livre da lista automatica de autores.
+    Exemplo: docx-utils next-author tese.docx
 
   validate <docx>
     Valida o pacote Open XML e informa TrackRevisions, campos e erros acionaveis.
@@ -678,94 +677,6 @@ Finalizacao:
 """);
 }
 
-static Dictionary<string, string> ParseOptions(string[] args)
-{
-    var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-    for (var i = 0; i < args.Length; i++)
-    {
-        var key = args[i];
-        if (!key.StartsWith("--", StringComparison.Ordinal))
-        {
-            throw new ArgumentException($"Unexpected argument: {key}");
-        }
-
-        if (i + 1 >= args.Length)
-        {
-            throw new ArgumentException($"Missing value for option: {key}");
-        }
-
-        options[key[2..]] = args[++i];
-    }
-
-    return options;
-}
-
-static IReadOnlyList<string> DefaultMutationAuthors() =>
-[
-    "Ultron",
-    "Brainiac",
-    "Jarvis",
-    "Vision",
-    "HumanTorch",
-    "Friday",
-    "C3PO",
-    "R2D2"
-];
-
-static string ResolveMutationAuthor(string docxPath, IReadOnlyDictionary<string, string> options)
-{
-    if (options.TryGetValue("author", out var explicitAuthor) && !string.IsNullOrWhiteSpace(explicitAuthor))
-    {
-        return explicitAuthor;
-    }
-
-    using var doc = WordprocessingDocument.Open(docxPath, false);
-    var existingAuthors = GetDistinctAuthors(doc).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-    var defaultAuthors = DefaultMutationAuthors();
-
-    foreach (var author in defaultAuthors)
-    {
-        if (!existingAuthors.Contains(author))
-        {
-            return author;
-        }
-    }
-
-    for (var suffix = 1; ; suffix++)
-    {
-        foreach (var author in defaultAuthors)
-        {
-            var candidate = $"{author}-{suffix}";
-            if (!existingAuthors.Contains(candidate))
-            {
-                return candidate;
-            }
-        }
-    }
-}
-
-static JsonSerializerOptions JsonOptions() => new()
-{
-    PropertyNameCaseInsensitive = true,
-    ReadCommentHandling = JsonCommentHandling.Skip,
-    AllowTrailingCommas = true
-};
-
-static JsonSerializerOptions JsonOptionsIndented() => new()
-{
-    PropertyNameCaseInsensitive = true,
-    ReadCommentHandling = JsonCommentHandling.Skip,
-    AllowTrailingCommas = true,
-    WriteIndented = true,
-    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-};
-
-static bool IsTrueOption(IReadOnlyDictionary<string, string> options, string name) =>
-    options.TryGetValue(name, out var value)
-    && bool.TryParse(value, out var parsed)
-    && parsed;
-
 static void ApplyCommentInitials(Comment comment)
 {
     comment.Initials = null;
@@ -775,7 +686,7 @@ static int ListParagraphs(string docxPath, IReadOnlyDictionary<string, string> o
 {
     using var stream = OpenSharedRead(docxPath);
     using var doc = WordprocessingDocument.Open(stream, false);
-    var includeAll = IsTrueOption(options, "all");
+    var includeAll = CliOptions.IsTrue(options, "all");
     var paragraphs = includeAll ? GetAllParagraphEntries(doc) : GetParagraphs(doc);
 
     var contains = options.TryGetValue("contains", out var containsValue)
@@ -813,7 +724,7 @@ static int ParagraphDetail(string docxPath, IReadOnlyDictionary<string, string> 
     var targetIndex = int.Parse(indexValue, CultureInfo.InvariantCulture);
     using var stream = OpenSharedRead(docxPath);
     using var doc = WordprocessingDocument.Open(stream, false);
-    var includeAll = IsTrueOption(options, "all");
+    var includeAll = CliOptions.IsTrue(options, "all");
     var paragraphs = includeAll ? GetAllParagraphEntries(doc) : GetParagraphs(doc);
     var entry = paragraphs.FirstOrDefault(p => p.Index == targetIndex);
     if (entry is null)
@@ -890,7 +801,7 @@ static int MathTextAudit(string docxPath, IReadOnlyDictionary<string, string> op
         findings.Sum(entry => entry.OfficeMathCount),
         findings);
 
-    var payload = JsonSerializer.Serialize(result, JsonOptionsIndented());
+    var payload = JsonSerializer.Serialize(result, CliOptions.JsonOptionsIndented());
     if (options.TryGetValue("out", out var outPath) && !string.IsNullOrWhiteSpace(outPath))
     {
         var fullOutPath = Path.GetFullPath(outPath);
@@ -1164,7 +1075,7 @@ static int LinearEquationPlanPreview(string docxPath, IReadOnlyDictionary<string
 
     var planPath = Path.GetFullPath(planPathValue);
     var outPath = Path.GetFullPath(outPathValue);
-    var plan = JsonSerializer.Deserialize<FormulaConversionPlan>(File.ReadAllText(planPath, Encoding.UTF8), JsonOptions()) ?? new FormulaConversionPlan();
+    var plan = JsonSerializer.Deserialize<FormulaConversionPlan>(File.ReadAllText(planPath, Encoding.UTF8), CliOptions.JsonOptions()) ?? new FormulaConversionPlan();
     Directory.CreateDirectory(Path.GetDirectoryName(outPath) ?? ".");
 
     var builder = new StringBuilder();
@@ -1902,7 +1813,7 @@ static int InsertTracked(string docxPath, IReadOnlyDictionary<string, string> op
         return 6;
     }
 
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     FileStream? lockStream = null;
     string? lockPath = null;
@@ -2029,7 +1940,7 @@ static int ApplyBlockMutationPlan(
     string commandName,
     bool replaceBetweenAnchors)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -2155,7 +2066,7 @@ static int ApplyBlockMutationPlan(
 
 static int EditParagraphs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -2275,7 +2186,7 @@ static int EditParagraphs(string docxPath, IReadOnlyDictionary<string, string> o
 
 static int StyleRunningText(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -2490,7 +2401,7 @@ static void SaveMainDocumentWithValidationRepair(WordprocessingDocument doc, Lis
 
 static int ApplyCrossrefs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -2635,7 +2546,7 @@ static int ApplyCrossrefs(string docxPath, IReadOnlyDictionary<string, string> o
 
 static int RepairStyleCaptions(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -2774,7 +2685,7 @@ static int RepairStyleCaptions(string docxPath, IReadOnlyDictionary<string, stri
 
 static int AddBookmarks(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -2872,7 +2783,7 @@ static int AddBookmarks(string docxPath, IReadOnlyDictionary<string, string> opt
 
 static int RewriteRefFields(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -2987,7 +2898,7 @@ static bool TryRewriteRefInstruction(string instruction, string[] prefixes, stri
 
 static int RepairLayoutPendencies(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -3096,7 +3007,7 @@ static int RepairLayoutPendencies(string docxPath, IReadOnlyDictionary<string, s
 
 static int RepairArticleAbntLayout(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -3211,7 +3122,7 @@ static int RepairArticleAbntLayout(string docxPath, IReadOnlyDictionary<string, 
 
 static int FormatAbntReferenceTitles(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3446,7 +3357,7 @@ static string BuildAbntReferenceTitleReport(
 
 static int RewriteEquationBlocks(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue)
         || !options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3544,7 +3455,7 @@ static int RewriteEquationBlocks(string docxPath, IReadOnlyDictionary<string, st
 
 static int EnsureStyleFonts(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3635,7 +3546,7 @@ static int EnsureStyleFonts(string docxPath, IReadOnlyDictionary<string, string>
 
 static int FormatEquationParagraphs(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3735,7 +3646,7 @@ static int FormatEquationParagraphs(string docxPath, IReadOnlyDictionary<string,
 
 static int NormalizeFigureIndent(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3864,7 +3775,7 @@ static void AddIfPresentOrRequired(Styles styles, List<string> styleIds, string 
 
 static int EnsureCanonicalStylesCommand(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -3911,7 +3822,7 @@ static int EnsureCanonicalStylesCommand(string docxPath, IReadOnlyDictionary<str
 
 static int SyncStylesFromDocxCommand(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("source-docx", out var sourceDocxValue) || string.IsNullOrWhiteSpace(sourceDocxValue))
     {
         Console.Error.WriteLine("Missing required option: --source-docx");
@@ -3970,7 +3881,7 @@ static int SyncStylesFromDocxCommand(string docxPath, IReadOnlyDictionary<string
 
 static int ApplyTableDesignStyle(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -4027,7 +3938,7 @@ static int ApplyTableDesignStyle(string docxPath, IReadOnlyDictionary<string, st
 
 static int ReplaceTable(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
         || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
     {
@@ -4054,7 +3965,7 @@ static int ReplaceTable(string docxPath, IReadOnlyDictionary<string, string> opt
         return 6;
     }
 
-    var plan = JsonSerializer.Deserialize<ReplaceTablePlan>(planJson, JsonOptions()) ?? new ReplaceTablePlan();
+    var plan = JsonSerializer.Deserialize<ReplaceTablePlan>(planJson, CliOptions.JsonOptions()) ?? new ReplaceTablePlan();
 
     var lockDirectory = Path.GetDirectoryName(lockPath) ?? ".";
     Directory.CreateDirectory(lockDirectory);
@@ -4095,41 +4006,6 @@ static int ReplaceTable(string docxPath, IReadOnlyDictionary<string, string> opt
     return skipped.Count == 0 ? 0 : 9;
 }
 
-static int ValidatePlan(string targetCommand, IReadOnlyDictionary<string, string> options)
-{
-    if (!options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
-    {
-        Console.Error.WriteLine("--plan is required");
-        return 4;
-    }
-
-    var planPath = Path.GetFullPath(planPathValue);
-    if (!File.Exists(planPath))
-    {
-        Console.Error.WriteLine($"Plan not found: {planPath}");
-        return 5;
-    }
-
-    var planJson = File.ReadAllText(planPath, Encoding.UTF8);
-    PlanValidationResult validation = targetCommand switch
-    {
-        "create-docx" => PlanContractSupport.ValidateCreateDocxPlan(planJson),
-        "insert-blocks" => PlanContractSupport.ValidateInsertBlocksPlan(planJson),
-        "replace-blocks" => PlanContractSupport.ValidateInsertBlocksPlan(planJson),
-        "replace-table" => PlanContractSupport.ValidateReplaceTablePlan(planJson),
-        _ => new PlanValidationResult(false, [$"Unsupported plan target for validate-plan: `{targetCommand}`. Use `create-docx`, `insert-blocks`, `replace-blocks` or `replace-table`."])
-    };
-
-    if (!validation.IsValid)
-    {
-        PrintPlanValidationErrors(validation.Errors);
-        return 6;
-    }
-
-    Console.WriteLine($"Plan valid for {targetCommand}: {planPath}");
-    return 0;
-}
-
 static int CreateDocxCommand(string[] args)
 {
     if (args.Length < 1)
@@ -4139,7 +4015,7 @@ static int CreateDocxCommand(string[] args)
     }
 
     var outputPath = Path.GetFullPath(args[0]);
-    var options = ParseOptions(args.Skip(1).ToArray());
+    var options = CliOptions.Parse(args.Skip(1).ToArray());
     return CreateDocxSupport.CreateDocx(outputPath, options);
 }
 
@@ -4153,7 +4029,7 @@ static void PrintPlanValidationErrors(IReadOnlyList<string> errors)
 
 static int ReplaceFiguresFromPlan(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
         || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
     {
@@ -4165,7 +4041,7 @@ static int ReplaceFiguresFromPlan(string docxPath, IReadOnlyDictionary<string, s
     var planPath = Path.GetFullPath(planPathValue);
     Directory.CreateDirectory(Path.GetDirectoryName(lockPath) ?? ".");
     var reportPath = options.TryGetValue("report", out var reportPathValue) ? Path.GetFullPath(reportPathValue) : null;
-    var plan = JsonSerializer.Deserialize<FigureReplacementPlan>(File.ReadAllText(planPath, Encoding.UTF8), JsonOptions()) ?? new FigureReplacementPlan();
+    var plan = JsonSerializer.Deserialize<FigureReplacementPlan>(File.ReadAllText(planPath, Encoding.UTF8), CliOptions.JsonOptions()) ?? new FigureReplacementPlan();
     var applied = new List<string>();
     var skipped = new List<string>();
 
@@ -4208,7 +4084,7 @@ static int ConvertTextFormulasToOfficeMath(string docxPath, IReadOnlyDictionary<
 
 static int ReplaceFormulasWithLinearOfficeMath(string docxPath, IReadOnlyDictionary<string, string> options, string commandName = "replace-formulas-with-linear-equations")
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
         || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
     {
@@ -4223,7 +4099,7 @@ static int ReplaceFormulasWithLinearOfficeMath(string docxPath, IReadOnlyDiction
     var keepLinear = options.TryGetValue("keep-linear", out var keepLinearValue)
         && bool.TryParse(keepLinearValue, out var keepLinearParsed)
         && keepLinearParsed;
-    var plan = JsonSerializer.Deserialize<FormulaConversionPlan>(File.ReadAllText(planPath, Encoding.UTF8), JsonOptions()) ?? new FormulaConversionPlan();
+    var plan = JsonSerializer.Deserialize<FormulaConversionPlan>(File.ReadAllText(planPath, Encoding.UTF8), CliOptions.JsonOptions()) ?? new FormulaConversionPlan();
     var formulas = plan.Formulas
         .Select(f => new FormulaSpec(f.Text, f.Latex, f.MathMl, f.Display, f.Occurrence))
         .Where(f => !string.IsNullOrWhiteSpace(f.RequiredText))
@@ -4275,7 +4151,7 @@ static int ReplaceFormulasWithLinearOfficeMath(string docxPath, IReadOnlyDiction
 
 static int ReplaceFormulasWithMathMlOfficeMath(string docxPath, IReadOnlyDictionary<string, string> options, string commandName = "replace-formulas-with-mathml-omml")
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue)
         || !options.TryGetValue("plan", out var planPathValue) || string.IsNullOrWhiteSpace(planPathValue))
     {
@@ -4287,7 +4163,7 @@ static int ReplaceFormulasWithMathMlOfficeMath(string docxPath, IReadOnlyDiction
     var planPath = Path.GetFullPath(planPathValue);
     Directory.CreateDirectory(Path.GetDirectoryName(lockPath) ?? ".");
     var reportPath = options.TryGetValue("report", out var reportPathValue) ? Path.GetFullPath(reportPathValue) : null;
-    var plan = JsonSerializer.Deserialize<FormulaConversionPlan>(File.ReadAllText(planPath, Encoding.UTF8), JsonOptions()) ?? new FormulaConversionPlan();
+    var plan = JsonSerializer.Deserialize<FormulaConversionPlan>(File.ReadAllText(planPath, Encoding.UTF8), CliOptions.JsonOptions()) ?? new FormulaConversionPlan();
     var formulas = plan.Formulas
         .Select(f => new FormulaSpec(f.Text, f.Latex, f.MathMl, f.Display, f.Occurrence))
         .Where(f => !string.IsNullOrWhiteSpace(f.RequiredText))
@@ -4784,7 +4660,7 @@ static void SetDrawingExtent(Drawing drawing, long widthEmu, long heightEmu)
 
 static int EnableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -4827,7 +4703,7 @@ static int EnableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string,
 
 static int DisableUpdateFieldsOnOpen(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue) || string.IsNullOrWhiteSpace(lockPathValue))
     {
@@ -5558,7 +5434,7 @@ static string BuildArticleAbntLayoutReport(
 
 static int RepairRefNumberOnly(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("lock", out var lockPathValue))
     {
@@ -6649,7 +6525,7 @@ static string BuildRefNumberOnlyReport(
 
 static int InsertFigures(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -6854,7 +6730,7 @@ static int InsertFigures(string docxPath, IReadOnlyDictionary<string, string> op
 
 static int InsertComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -7185,7 +7061,7 @@ static bool ReanchorCommentOnParagraph(MainDocumentPart mainPart, string comment
 
 static int ReanchorComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -7313,7 +7189,7 @@ static int ReanchorComments(string docxPath, IReadOnlyDictionary<string, string>
 
 static int AnswerComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("plan", out var planPathValue))
     {
         Console.Error.WriteLine("Missing required option: --plan");
@@ -7474,7 +7350,7 @@ static string NextUniqueHexValue(HashSet<string> existing, int hexLength = 8)
 
 static int ReplyComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
 
     if (!options.TryGetValue("plan", out var planPathValue))
     {
@@ -7695,7 +7571,7 @@ static int ReplyComments(string docxPath, IReadOnlyDictionary<string, string> op
 
 static int RemoveComments(string docxPath, IReadOnlyDictionary<string, string> options)
 {
-    var author = ResolveMutationAuthor(docxPath, options);
+    var author = MutationAuthorResolver.Resolve(docxPath, options);
     if (!options.TryGetValue("ids", out var idsValue) || string.IsNullOrWhiteSpace(idsValue))
     {
         Console.Error.WriteLine("Missing required option: --ids");
@@ -9610,7 +9486,7 @@ static void WriteCommentsJson(IReadOnlyList<CommentListEntry> entries)
             parentCommentId = entry.ParentCommentId
         })
     };
-    Console.WriteLine(JsonSerializer.Serialize(payload, JsonOptionsIndented()));
+    Console.WriteLine(JsonSerializer.Serialize(payload, CliOptions.JsonOptionsIndented()));
 }
 
 static TabularOutput BuildCommentsOutputTable(IReadOnlyList<CommentListEntry> entries, bool includeIndex) =>
@@ -9720,56 +9596,6 @@ static string GetRevisionDate(OpenXmlElement element) => element switch
     DeletedRun deleted => deleted.Date is null ? "" : deleted.Date.Value.ToString("O", CultureInfo.InvariantCulture),
     _ => ""
 };
-
-static IReadOnlyList<string> GetDistinctAuthors(WordprocessingDocument doc)
-{
-    var mainPart = doc.MainDocumentPart ?? throw new InvalidOperationException("No main document part.");
-    var authors = new List<string>();
-    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    const string wordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-
-    void AddAuthor(string? author)
-    {
-        var value = author?.Trim();
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        if (seen.Add(value))
-        {
-            authors.Add(value);
-        }
-    }
-
-    foreach (var part in MainStoryParts(mainPart))
-    {
-        if (part.RootElement is null)
-        {
-            continue;
-        }
-
-        foreach (var element in part.RootElement.Descendants<OpenXmlElement>().Prepend(part.RootElement))
-        {
-            AddAuthor(element.GetAttributes()
-                .FirstOrDefault(attribute =>
-                    string.Equals(attribute.LocalName, "author", StringComparison.Ordinal)
-                    && string.Equals(attribute.NamespaceUri, wordprocessingNamespace, StringComparison.Ordinal))
-                .Value);
-        }
-    }
-
-    var comments = mainPart.WordprocessingCommentsPart?.Comments;
-    if (comments is not null)
-    {
-        foreach (var comment in comments.Elements<Comment>())
-        {
-            AddAuthor(comment.Author?.Value);
-        }
-    }
-
-    return authors;
-}
 
 static bool NormalizedStartsWith(string text, string prefix)
 {
@@ -10634,4 +10460,5 @@ sealed class RevisionMetadata(string author, DateTime dateUtc)
 
     public StringValue NextRevisionId() => (_counter++).ToString(CultureInfo.InvariantCulture);
 }
+
 

@@ -65,6 +65,7 @@ public sealed class DocxOpenXmlToolsCliTests
         Assert.Contains("docx-utils create-docx <output.docx> [--plan <json>]", helpResult.StandardOutput);
         Assert.Contains("plan-contracts [comando] [--format markdown|json]", helpResult.StandardOutput);
         Assert.Contains("validate-plan <comando> --plan <json>", helpResult.StandardOutput);
+        Assert.Contains("valida o contrato JSON de create-docx, insert-blocks, replace-blocks ou replace-table", helpResult.StandardOutput);
         Assert.Contains("replace-blocks <docx> --plan <json>", helpResult.StandardOutput);
         Assert.Contains("A skill cria as linhas, celulas e tabelas OpenXML", helpResult.StandardOutput);
         Assert.Contains("Exemplo minimo de JSON:", helpResult.StandardOutput);
@@ -98,6 +99,30 @@ public sealed class DocxOpenXmlToolsCliTests
         using var json = JsonDocument.Parse(jsonResult.StandardOutput);
         Assert.Equal("create-docx", json.RootElement.GetProperty("name").GetString());
         Assert.Contains("CreateDocxPlan -> title + paragraphs[] -> subtitles[] -> sections[]", json.RootElement.GetProperty("planShape").GetString());
+    }
+
+    [Fact]
+    public async Task Plan_contracts_with_invalid_format_returns_exit_code_4_and_message()
+    {
+        var skillRoot = FindSkillRoot();
+        var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
+
+        var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- plan-contracts --format txt", skillRoot);
+
+        Assert.Equal(4, result.ExitCode);
+        Assert.Contains("Unsupported format. Use `markdown` or `json`.", result.CombinedOutput);
+    }
+
+    [Fact]
+    public async Task Plan_contracts_with_unknown_contract_returns_exit_code_3()
+    {
+        var skillRoot = FindSkillRoot();
+        var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
+
+        var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- plan-contracts contrato-desconhecido", skillRoot);
+
+        Assert.Equal(3, result.ExitCode);
+        Assert.Contains("Unknown plan contract: contrato-desconhecido", result.CombinedOutput);
     }
 
     [Theory]
@@ -190,6 +215,52 @@ public sealed class DocxOpenXmlToolsCliTests
 
         Assert.Equal(6, result.ExitCode);
         Assert.Contains(expectedMessage, result.CombinedOutput);
+    }
+
+    [Fact]
+    public async Task Validate_plan_without_plan_argument_returns_exit_code_4()
+    {
+        var skillRoot = FindSkillRoot();
+        var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
+
+        var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- validate-plan create-docx", skillRoot);
+
+        Assert.Equal(4, result.ExitCode);
+        Assert.Contains("--plan is required", result.CombinedOutput);
+    }
+
+    [Fact]
+    public async Task Validate_plan_without_target_command_returns_exit_code_1_and_usage()
+    {
+        var skillRoot = FindSkillRoot();
+        var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
+
+        using var tempDir = new TempDirectory();
+        var missingPlanPath = Path.Combine(tempDir.Path, "missing.json");
+
+        var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- validate-plan --plan \"{missingPlanPath}\"", skillRoot);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.True(
+            result.StandardOutput.Contains("Uso:", StringComparison.Ordinal) ||
+            result.StandardError.Contains("Uso:", StringComparison.Ordinal),
+            result.CombinedOutput);
+        Assert.DoesNotContain("Unhandled exception", result.CombinedOutput, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Validate_plan_with_missing_plan_file_returns_exit_code_5()
+    {
+        var skillRoot = FindSkillRoot();
+        var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
+
+        using var tempDir = new TempDirectory();
+        var missingPlanPath = Path.Combine(tempDir.Path, "missing-plan.json");
+
+        var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- validate-plan create-docx --plan \"{missingPlanPath}\"", skillRoot);
+
+        Assert.Equal(5, result.ExitCode);
+        Assert.Contains("Plan not found:", result.CombinedOutput);
     }
 
     [Fact]
@@ -290,6 +361,27 @@ public sealed class DocxOpenXmlToolsCliTests
 
         Assert.True(result.ExitCode == 0, result.CombinedOutput);
         Assert.Equal(expectedAuthor, ReadInsertedCommentAuthor(docxPath));
+    }
+
+    [Theory]
+    [InlineData(new string[] { }, "Ultron")]
+    [InlineData(new[] { "Ultron" }, "Brainiac")]
+    [InlineData(new[] { "Ultron", "Brainiac", "Jarvis", "Vision", "HumanTorch", "Friday", "C3PO", "R2D2" }, "Ultron-1")]
+    [InlineData(new[] { "Ultron", "Brainiac", "Jarvis", "Vision", "HumanTorch", "Friday", "C3PO", "R2D2", "Ultron-1" }, "Brainiac-1")]
+    public async Task Next_author_command_returns_the_next_available_author_without_mutating_the_docx(string[] existingAuthors, string expectedAuthor)
+    {
+        var skillRoot = FindSkillRoot();
+        var toolsProject = Path.Combine(skillRoot, "src", "DocxOpenXmlTools", "DocxOpenXmlTools.csproj");
+
+        using var tempDir = new TempDirectory();
+        var docxPath = Path.Combine(tempDir.Path, "authors.docx");
+
+        CreateDocxForAuthorSelection(docxPath, existingAuthors);
+        var result = await RunProcessAsync("dotnet", $"run --project \"{toolsProject}\" -- next-author \"{docxPath}\"", skillRoot);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(expectedAuthor, result.StandardOutput.Trim());
+        Assert.True(string.IsNullOrWhiteSpace(result.StandardError), result.CombinedOutput);
     }
 
     [Theory]
@@ -503,8 +595,8 @@ public sealed class DocxOpenXmlToolsCliTests
         var tables = document.MainDocumentPart!.Document.Body!.Elements<Table>().ToList();
         Assert.Equal(2, tables.Count);
 
-        Assert.Equal("TabelaOriginal", tables[0].GetFirstChild<TableProperties>()?.TableStyle?.Val?.Value);
-        Assert.Equal("TabelaOriginal", tables[1].GetFirstChild<TableProperties>()?.TableStyle?.Val?.Value);
+        Assert.Equal("tabelauerj", tables[0].GetFirstChild<TableProperties>()?.TableStyle?.Val?.Value);
+        Assert.Equal("tabelauerj", tables[1].GetFirstChild<TableProperties>()?.TableStyle?.Val?.Value);
 
         var secondTableRows = tables[1].Elements<TableRow>().ToList();
         Assert.Equal(2, secondTableRows.Count);
@@ -841,7 +933,7 @@ public sealed class DocxOpenXmlToolsCliTests
         var body = mainPart.Document.Body!;
         body.Append(new Paragraph(new Run(new Text("Antes da primeira tabela."))));
         body.Append(CreateStyledTable(
-            "TabelaOriginal",
+            "tabelauerj",
             "dados-original",
             [
                 ["Tabela 1 - Celula A1", "Tabela 1 - Celula A2"],
@@ -849,7 +941,7 @@ public sealed class DocxOpenXmlToolsCliTests
             ]));
         body.Append(new Paragraph(new Run(new Text("Entre tabelas para ancoragem."))));
         body.Append(CreateStyledTable(
-            "TabelaOriginal",
+            "tabelauerj",
             "dados-original",
             [
                 ["Tabela 2 - Celula A1", "Tabela 2 - Celula A2"],
