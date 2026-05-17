@@ -106,3 +106,4 @@ presets/skills-services.json
 agent-events/results
 agent-events
 computer-use-turn-ended
+**/*.lock
