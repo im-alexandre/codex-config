@@ -1,6 +1,6 @@
 model = "gpt-5.5"
-model_reasoning_effort = "high"
-plan_mode_reasoning_effort = "xhigh"
+model_reasoning_effort = "medium"
+plan_mode_reasoning_effort = "high"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 personality = "none"
@@ -13,17 +13,35 @@ prevent_idle_sleep = true
 memories = true
 hooks = true
 
-[[hooks.StartSession.hooks]]
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear"
+
+[[hooks.SessionStart.hooks]]
 type = "command"
 command = "python C:/Users/imale/.codex/hooks/force_subagent_defaults.py"
 timeout = 10
 statusMessage = "Forcing subagent defaults"
-#
-# [[hooks.StartSession.hooks]]
-# type = "command"
-# command = "python C:/Users/imale/.codex/hooks/prefer_subagents.py"
-# timeout = 10
-# statusMessage = "Applying subagent orchestration policy"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "python C:/Users/imale/.codex/skills/codex-session-tracker/scripts/script.py hook session-start"
+timeout = 5
+statusMessage = "Indexando sessão Codex"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hooks\codex-notify.ps1"'
+timeout = 10
+statusMessage = "Enviando notificação"
+
+[[hooks.PermissionRequest]]
+matcher = "*"
+[[hooks.PermissionRequest.hooks]]
+type = "command"
+command = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hooks\codex-notify.ps1"'
+timeout = 10
+statusMessage = "Enviando notificação"
 
 [agents]
 max_threads = 10

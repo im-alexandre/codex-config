@@ -580,7 +580,10 @@ def cmd_hook_snippet(args: argparse.Namespace) -> int:
     script = Path(__file__).resolve().as_posix()
     print(
         f"""
-[[hooks.StartSession.hooks]]
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear"
+
+[[hooks.SessionStart.hooks]]
 type = "command"
 command = "python {script} hook session-start"
 timeout = 5

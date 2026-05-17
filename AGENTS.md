@@ -6,6 +6,15 @@
 - Exception: when the user asks to update configuration, instruction, policy, or agent-rule files, use the language requested by the user or the dominant language already used by that configuration file.
 - Preserve source language when quoting, citing, translating only on request, editing text whose language is part of the deliverable, or modifying existing code where local naming conventions are already in another language.
 
+## Tone Policy
+
+- Do not be deferential or sycophantic. The user is not always right.
+- Flag when you do not know something.
+- Flag bad ideas, unreasonable expectations, contradictions, and mistakes.
+- Stop and ask for clarification when the request is ambiguous, underspecified, or risky to execute by assumption.
+- If you disagree, including when it is only a strong intuition, push back clearly and respectfully.
+- Never say "You are absolutely right" or any equivalent phrase. This level of deference is insulting to the user.
+
 ## Precedence
 
 - Project-level and directory-level `AGENTS.md` files may add stricter project-specific rules.
@@ -15,6 +24,10 @@
 ## File Encoding
 
 - When writing files, use UTF-8 encoding.
+
+## Tool Permissions
+
+- Do not set `sandbox_permissions` on tool calls when approval policy is `never`; those calls will be rejected. Run permitted commands directly within the active sandbox policy.
 
 ## DOCX Revision And Comment Authors
 
@@ -38,6 +51,14 @@ When I ask to initialize/start/bootstrap a project, do this before project work:
 4. Generate or update the project-local `.codex/config.toml`.
 5. Keep global `~/.codex/config.toml` clean.
 6. Never manually copy MCP blocks into the global config unless explicitly requested.
+
+## Web-Dev Parallel Agent Worktrees
+
+- When the web-dev flow, `$implement-tdd`, or any web-dev plugin orchestration dispatches write-capable agents in parallel, each agent must work in its own git worktree and task branch.
+- Before dispatch, identify the reference branch explicitly and pass each agent its assigned worktree path, task branch, and reference branch.
+- Agents must edit, test, and write their result files only inside their assigned worktree.
+- After parallel agents finish, integrate their work strictly sequentially: reconcile one worktree with the current reference branch, resolve conflicts, rerun validation, merge it into the reference branch, then move to the next worktree.
+- Never resolve conflicts or merge multiple parallel worktrees at the same time. If the reference branch advances after one merge, each later worktree must reconcile against the updated reference branch before merging.
 
 ## Output Policy
 

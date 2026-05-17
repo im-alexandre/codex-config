@@ -1,0 +1,78 @@
+<h2>Layout proposto para o Codex Dashboard TUI</h2>
+<p class="subtitle">Foco: gerenciar sessoes rapidamente sem sair do terminal.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Tela principal - mestre/detalhe</div>
+  <div class="mockup-body">
+    <div style="border:1px solid #d8dee9;border-radius:8px;overflow:hidden;font-family:Consolas,Menlo,monospace;background:#0f172a;color:#e5e7eb">
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#111827;border-bottom:1px solid #334155">
+        <strong>Codex Dashboard</strong>
+        <span>janela: codex | 5 sessoes | r atualizar</span>
+      </div>
+      <div style="display:grid;grid-template-columns:44% 56%;min-height:360px">
+        <div style="border-right:1px solid #334155">
+          <div style="display:grid;grid-template-columns:1fr 10ch 8ch;gap:8px;padding:8px 10px;color:#93c5fd;border-bottom:1px solid #334155">
+            <strong>PROJETO</strong><strong>ESTADO</strong><strong>WORKERS</strong>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 10ch 8ch;gap:8px;padding:8px 10px;background:#1e293b">
+            <span>&gt; ~/.codex</span><span style="color:#fbbf24">esperando</span><span>2</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 10ch 8ch;gap:8px;padding:8px 10px">
+            <span>  D:/Financas</span><span style="color:#34d399">rodando</span><span>1</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 10ch 8ch;gap:8px;padding:8px 10px">
+            <span>  D:/apps/site</span><span style="color:#94a3b8">parada</span><span>0</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 10ch 8ch;gap:8px;padding:8px 10px">
+            <span>  D:/codex_dashboard</span><span style="color:#60a5fa">ativo</span><span>0</span>
+          </div>
+        </div>
+        <div style="padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <strong>~/.codex</strong>
+              <div style="color:#cbd5e1">C:/Users/imale/.codex</div>
+            </div>
+            <div style="color:#fbbf24">aguardando permissao</div>
+          </div>
+          <div style="border-top:1px solid #334155;padding-top:10px;margin-top:8px">
+            <strong>Workers</strong>
+            <div style="margin-top:8px;display:grid;grid-template-columns:1fr 12ch 12ch;gap:8px">
+              <span>&gt; reviewer</span><span>rodando</span><span>04:58</span>
+              <span>  worker-docx</span><span>esperando</span><span>04:52</span>
+            </div>
+          </div>
+          <div style="border-top:1px solid #334155;padding-top:10px;margin-top:14px">
+            <strong>Acoes</strong>
+            <div style="margin-top:8px;color:#cbd5e1;line-height:1.8">
+              Enter focar aba da sessao<br>
+              w alternar lista sessao/workers<br>
+              o abrir/focar worker selecionado<br>
+              n nova sessao | p novo projeto em D: | e renomear
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:8px 12px;background:#111827;border-top:1px solid #334155;color:#cbd5e1">
+        ↑/↓ mover  / filtrar  n nova  p projeto  Enter focar  e renomear  q sair
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Aprovar esta estrutura</h3>
+      <p>Seguir com lista mestre, painel de detalhe, workers embutidos e atalhos na barra inferior.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="change" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Ajustar antes</h3>
+      <p>Mudar densidade, posicao dos workers, atalhos ou fluxo de nova sessao antes da spec.</p>
+    </div>
+  </div>
+</div>

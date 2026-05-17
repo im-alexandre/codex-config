@@ -16,11 +16,21 @@ Rules:
 - Mark same files, migrations, shared contracts, routers, schemas, fixtures, and test harness changes as sequential.
 - Dispatch only one wave of non-overlapping tasks at a time.
 - Put shared setup, dependency installation, generated clients, migrations, and contract changes before dependent tasks.
+- For any parallel write-capable wave, assign each task its own git worktree path and task branch.
+- Record the reference branch for the wave. Use the current branch unless the plan explicitly names another reference branch.
+- Integrate completed parallel worktrees sequentially: reconcile one task branch with the current reference branch, resolve conflicts, rerun validation, merge, then continue to the next worktree.
+- Never resolve conflicts or merge two parallel worktrees at the same time.
 
 ## Implementer Prompt Shape
 
 ```text
 You are the <agent-name> implementer for task <task-id>.
+
+Workspace:
+- Worktree path: <assigned worktree path>
+- Task branch: <assigned task branch>
+- Reference branch: <reference branch>
+- Work only inside the assigned worktree. Do not edit the original checkout or another agent's worktree.
 
 Use strict TDD:
 1. write/update tests first;
@@ -44,6 +54,7 @@ Commands:
 - Integration: <optional command>
 
 Do not edit outside the write scope unless blocked; report blocked if scope is wrong.
+Before final result, confirm the current path is the assigned worktree and list the task branch.
 ```
 
 ## Aggregator Prompt Shape

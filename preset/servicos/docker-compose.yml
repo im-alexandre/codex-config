@@ -10,7 +10,7 @@ services:
       - "11434:11434"
     environment:
       # Perfil conservador para embeddings do scopus-search.
-      OLLAMA_NUM_PARALLEL: "14"
+      OLLAMA_NUM_PARALLEL: "10"
       OLLAMA_MAX_LOADED_MODELS: "1"
       OLLAMA_MAX_QUEUE: "512"
       OLLAMA_KEEP_ALIVE: "10m"
@@ -23,7 +23,7 @@ services:
 
     volumes:
       - type: bind
-        source: D:\ollama\models
+        source: D:\utils\ollama\models
         target: /root/.ollama/models
     cpus: 2.0
     mem_limit: 24g
@@ -44,7 +44,7 @@ services:
       - "9523:11434"
     volumes:
       - type: bind
-        source: D:\ollama\models
+        source: D:\utils\ollama\models
         target: /root/.ollama/models
     environment:
       OLLAMA_NUM_PARALLEL: "2"

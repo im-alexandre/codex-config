@@ -65,7 +65,7 @@ Gerar o bloco TOML:
 python "$env:USERPROFILE\.codex\skills\codex-session-tracker\scripts\script.py" hook-snippet
 ```
 
-O bloco deve ser adicionado a `~/.codex/config.toml` junto aos demais hooks `StartSession`.
+O bloco deve ser adicionado a `~/.codex/config.toml` junto aos demais hooks `SessionStart`.
 
 ## Como o Rastreamento Funciona
 
