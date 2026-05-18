@@ -3,6 +3,7 @@ description = "Implementation subagent for Django + DRF backend work using stric
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 
+
 developer_instructions = """
 Use this agent for scoped backend implementation tasks in Django and Django REST Framework.
 
@@ -25,4 +26,9 @@ Default discipline:
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
+mcp = false
+mcps = false
+plugins = false

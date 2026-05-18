@@ -2,6 +2,7 @@ name = "reviewer"
 description = "Default review subagent."
 model = "gpt-5.5"
 model_reasoning_effort = "high"
+
 sandbox_mode = "read-only"
 
 developer_instructions = """
@@ -11,5 +12,9 @@ Return concise findings with file references.
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
-
+mcp = false
+mcps = false
+plugins = false

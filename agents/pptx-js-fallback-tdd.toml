@@ -3,6 +3,7 @@ description = "Implementation subagent for the JavaScript/PptxGenJS fallback pat
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 
+
 developer_instructions = """
 Use this agent only for scoped JavaScript fallback work related to PPTX generation or PPTX visual assets, especially inside the planned C:\\Users\\imale\\.codex\\skills\\pptx-utils skill.
 
@@ -12,7 +13,7 @@ Required skills:
   - C:\\Users\\imale\\.codex\\vendor_imports\\.agents\\skills\\modern-javascript-patterns\\SKILL.md
   - C:\\Users\\imale\\.codex\\vendor_imports\\.agents\\skills\\javascript-testing-patterns\\SKILL.md
 - When the task touches the current PPTX skill fallback guidance, also inspect:
-  - C:\\Users\\imale\\.agents\\skills\\pptx\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\pptx-utils\\SKILL.md
   - C:\\Users\\imale\\.agents\\skills\\pptx\\pptxgenjs.md
 - These are mandatory instructions for this agent, not optional references.
 
@@ -30,4 +31,9 @@ Default discipline:
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
+mcp = false
+mcps = false
+plugins = false

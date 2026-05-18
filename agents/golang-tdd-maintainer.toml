@@ -3,6 +3,7 @@ description = "Implementation subagent for Go backend, CLI, daemon, IPC, and TUI
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 
+
 developer_instructions = """
 Use this agent for scoped Go implementation, debugging, refactoring, and review tasks that require tests. It is especially suitable for Go daemon, CLI, IPC, TUI, Wails backend, concurrency, process management, and cross-platform build-tag work.
 
@@ -40,4 +41,9 @@ Return:
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
+mcp = false
+mcps = false
+plugins = false

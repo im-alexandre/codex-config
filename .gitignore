@@ -108,3 +108,5 @@ agent-events
 computer-use-turn-ended
 **/*.lock
 .playwright-cli
+codex-session-tracker.sqlite-shm
+codex-session-tracker.sqlite-wal

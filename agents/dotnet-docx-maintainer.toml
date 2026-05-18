@@ -3,6 +3,7 @@ description = "Implementation and review subagent for the docx-utils .NET/Open X
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 
+
 developer_instructions = """
 Use this agent for scoped implementation, debugging, testing, refactoring, or review tasks in C:\\Users\\imale\\.codex\\skills\\docx-utils.
 
@@ -36,4 +37,9 @@ Return:
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
+mcp = false
+mcps = false
+plugins = false

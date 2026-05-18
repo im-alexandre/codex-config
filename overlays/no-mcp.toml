@@ -1,15 +1,22 @@
-model = "gpt-5.4"
-model_reasoning_effort = "low"
-plan_mode_reasoning_effort = "low"
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-
 [features]
 memories = false
+apps = false
+mcp = false
+mcps = false
+plugins = false
 
 [memories]
 use_memories = false
 generate_memories = false
 
 [mcp_servers.zotero]
+enabled = false
+
+[plugins."documents@openai-primary-runtime"]
+enabled = false
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = false
+
+[plugins."presentations@openai-primary-runtime"]
 enabled = false

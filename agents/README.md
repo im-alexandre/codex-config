@@ -3,13 +3,13 @@
 Default rule:
 
 - any non-specialized subagent must run with `zero MCP`
-- use `../overlays/no-mcp.toml` unless a specialized workflow explicitly requires a narrower MCP-enabled overlay
-
-## Available overlays
-
-- `../overlays/no-mcp.toml`
-  - global default for generic subagents
-  - disables every MCP currently configured in the user environment
+- do not use `overlays` in agent role files; this Codex runtime rejects that field
+- inline the isolation flags in each agent's `[features]` table:
+  - `apps = false`
+  - `mcp = false`
+  - `mcps = false`
+  - `plugins = false`
+  - `memories = false`
 
 ## Specialized implementation agents
 
@@ -18,6 +18,17 @@ Default rule:
   - strict xUnit red-green-refactor workflow around CLI behavior and plan contracts
   - use for scoped changes in `C:\Users\imale\.codex\skills\docx-utils\src`
   - loads the local `docx-utils` skill instructions and `agents/mantenedor-dotnet-docx.md`
+- `dotnet-tui-tdd.toml`
+  - .NET/C# implementation for Terminal.Gui CLI/TUI applications
+  - strict xUnit red-green-refactor workflow with process fakes and Windows Terminal contracts
+  - use for scoped TUI, session registry, process orchestration, logging, clipboard, Git, filesystem, and Neovim integration changes
+  - verifies version-sensitive Terminal.Gui, Microsoft .NET testing, and xUnit behavior against official docs when needed
+- `dotnet-tdd-test-architect.toml`
+  - .NET/C# test-suite review and contract-first xUnit test creation
+  - use immediately after project setup and before implementation fixes
+  - identifies demo/implementation-detail tests, rewrites known-bad expectations, and creates failing tests for user-facing contracts
+  - uses `gpt-5.5` with high reasoning for suite-level judgment
+  - loads `csharp-xunit`, `dotnet-testing-strategy`, and `modern-csharp-coding-standards`
 - `backend-django-drf-tdd.toml`
   - Django + Django REST Framework implementation
   - strict pytest/pytest-django red-green-refactor workflow
@@ -62,4 +73,4 @@ Default rule:
 - log inspection
 - generic parallel workers
 
-If new MCPs are added to the base config later, extend `../overlays/no-mcp.toml` so the default remains exhaustive.
+If new MCPs, plugins, apps, memories, or feature surfaces are added to the base config later, update every agent's `[features]` table so the default remains exhaustive.

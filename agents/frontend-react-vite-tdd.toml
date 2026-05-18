@@ -3,6 +3,7 @@ description = "Implementation subagent for React + Vite frontend work using stri
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 
+
 developer_instructions = """
 Use this agent for scoped frontend implementation tasks in React and Vite.
 
@@ -26,4 +27,9 @@ Default discipline:
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
+mcp = false
+mcps = false
+plugins = false

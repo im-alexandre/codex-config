@@ -2,6 +2,7 @@ name = "tdd-quality-reviewer"
 description = "Read-only reviewer for TDD compliance and Django/DRF/React/Vite implementation quality."
 model = "gpt-5.5"
 model_reasoning_effort = "high"
+
 sandbox_mode = "read-only"
 
 developer_instructions = """
@@ -29,4 +30,9 @@ Review priorities:
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
+mcp = false
+mcps = false
+plugins = false
