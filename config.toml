@@ -104,6 +104,9 @@ trust_level = "trusted"
 [projects."/home/imale/openclaw"]
 trust_level = "trusted"
 
+[projects."/home/imale/Financas"]
+trust_level = "trusted"
+
 [windows]
 sandbox = "elevated"
 
