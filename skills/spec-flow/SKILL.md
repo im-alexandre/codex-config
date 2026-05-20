@@ -12,8 +12,8 @@ Conduza mudanças de software em fases, mantendo decisões interativas na thread
 1. Leia o contexto do projeto: `AGENTS.md`, README, estrutura, branch, estado do git e artefatos existentes de spec/plano/tasks.
 2. Identifique o modo disponível:
    - Spec Kit: `.specify/`, `specs/**/spec.md`, `plan.md`, `tasks.md` ou skills/comandos `speckit-*`.
-   - Superpowers: `docs/superpowers/specs/` ou `docs/superpowers/plans/`.
-   - Fallback: `.codex/spec-flow/<yyyy-mm-dd>-<slug>/`.
+   - Superpowers: prompts/skills de brainstorming, spec e plano podem ser usados como método, mas os artefatos gerados devem ficar no mesmo diretório de feature usado pelo Spec Kit.
+   - Fallback: quando não houver diretório existente, crie `specs/<slug>/`.
 3. Faça brainstorming quando houver feature nova, refatoração comportamental ou decisão de produto/arquitetura.
 4. Crie ou atualize a spec e peça aprovação do usuário.
 5. Gere plano e tasks depois da aprovação da spec.
@@ -36,11 +36,14 @@ Conduza mudanças de software em fases, mantendo decisões interativas na thread
 
 ## Artefatos
 
-Prefira os caminhos do projeto. Quando não houver convenção local, use:
+Use um único diretório de feature para todos os artefatos do fluxo, independente de o raciocínio vir de Spec Kit, Superpowers ou fallback local. Prefira um diretório Spec Kit existente; quando não houver, crie:
 
-- `.codex/spec-flow/<yyyy-mm-dd>-<slug>/spec.md`
-- `.codex/spec-flow/<yyyy-mm-dd>-<slug>/plan.md`
-- `.codex/spec-flow/<yyyy-mm-dd>-<slug>/tasks.md`
+- `specs/<slug>/brainstorm.md`
+- `specs/<slug>/spec.md`
+- `specs/<slug>/plan.md`
+- `specs/<slug>/tasks.md`
+
+Se o projeto já tiver uma feature em `specs/<numero>-<slug>/`, `specs/<slug>/` ou outro padrão sob `specs/`, continue nesse diretório em vez de criar outro. Não grave novos artefatos de `spec-flow` em `docs/superpowers/specs/`, `docs/superpowers/plans/` ou `.codex/spec-flow/`; trate esses caminhos apenas como legado para leitura/retomada.
 
 O handoff para `$implement-tdd` deve ficar em:
 

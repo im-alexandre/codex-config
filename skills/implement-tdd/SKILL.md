@@ -31,8 +31,8 @@ Do not trigger implicitly for ordinary coding requests. If the user asks to brai
    - After reading the context and confirming the plan path, remove `.codex/web-dev/implementation-context.md` before dispatching implementation work so stale context cannot be reused accidentally.
    - If the context exists but the plan path is missing or invalid, stop and ask for the correct plan path.
 3. If no argument is provided and there is no temporary context, find the newest plan under the current project:
-   - Prefer `docs/superpowers/plans/*.md`.
-   - Also scan `.codex/plans/*.md`, `specs/**/plan.md`, and `specs/**/tasks.md`.
+   - Prefer `specs/**/plan.md` and `specs/**/tasks.md`, including plans produced by `spec-flow` through Superpowers-style brainstorming/planning.
+   - Also scan legacy `docs/superpowers/plans/*.md` and `.codex/plans/*.md`.
    - Use `scripts/find_latest_plan.py --root <cwd>` and read the selected path.
    - If no plan is found, ask for a plan path or direct instruction.
 4. If the argument is not a file path, treat it as direct instruction mode.
@@ -190,17 +190,17 @@ After all implementation waves finish:
    - record exact commands, URLs, browser/tool used, flows checked, failures found, and fixes or remaining manual-validation gaps;
    - do not mark the plan complete if manual E2E could not run unless the final answer clearly labels the blocker and why automated validation was the only possible evidence.
 8. If implementation is complete and validations have run, move the implemented plan out of the active plan directory:
-   - For `docs/superpowers/plans/<name>.md`, move to `docs/superpowers/plans/implemented/<name>.md`.
-   - For `.codex/plans/<name>.md`, move to `.codex/plans/implemented/<name>.md`.
+   - For legacy `docs/superpowers/plans/<name>.md`, move to `docs/superpowers/plans/implemented/<name>.md`.
+   - For legacy `.codex/plans/<name>.md`, move to `.codex/plans/implemented/<name>.md`.
    - Create the destination directory if needed.
    - If the destination exists, append a timestamp before `.md` instead of overwriting.
-   - Do not move `specs/**/plan.md` or `specs/**/tasks.md`; instead mention that Spec Kit plans remain in place.
+   - Do not move `specs/**/plan.md` or `specs/**/tasks.md`; Spec Kit and `spec-flow` artifacts remain in the feature directory.
 9. Remove `.codex/agent-events/skill-harness-required` after all implementation and review evidence has been inspected and the plan is either integrated or explicitly abandoned.
 10. Return changed files, tests run, TDD evidence, skill-harness evidence reviewed, manual E2E flows checked, archived plan path, conflicts resolved, and remaining risks.
 
 ## Superpowers Integration
 
-This command replaces the final execution handoff after `superpowers:writing-plans` saves a plan. Keep the current flow through `brainstorming` and `writing-plans`; when the plan is complete, run `$implement-tdd` with no arguments. If `.codex/web-dev/implementation-context.md` exists, use it first; otherwise auto-pick the newest plan. A plan path can still be passed explicitly.
+This command replaces the final execution handoff after `superpowers:writing-plans` saves a plan. Keep the current reasoning flow through `brainstorming` and `writing-plans`, but when invoked through `spec-flow` the resulting artifacts should live in the Spec Kit feature directory (`specs/<slug>/brainstorm.md`, `spec.md`, `plan.md`, `tasks.md`). When the plan is complete, run `$implement-tdd` with no arguments. If `.codex/web-dev/implementation-context.md` exists, use it first; otherwise auto-pick the newest plan. A plan path can still be passed explicitly.
 
 Do not use `superpowers:executing-plans` or `superpowers:subagent-driven-development` as the primary executor unless the user asks for the original Superpowers execution behavior. This skill incorporates their useful ideas while adding stack-aware agent routing, waves, TDD red/green/refactor evidence, and a final aggregator.
 

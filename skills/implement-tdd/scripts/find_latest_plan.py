@@ -7,19 +7,20 @@ import argparse
 from pathlib import Path
 
 
-PATTERNS = (
-    "docs/superpowers/plans/*.md",
-    ".codex/plans/*.md",
-    "specs/**/plan.md",
-    "specs/**/tasks.md",
+PATTERN_GROUPS = (
+    ("specs/**/plan.md", "specs/**/tasks.md"),
+    ("docs/superpowers/plans/*.md", ".codex/plans/*.md"),
 )
 
 
 def candidates(root: Path) -> list[Path]:
-    found: list[Path] = []
-    for pattern in PATTERNS:
-        found.extend(path for path in root.glob(pattern) if path.is_file())
-    return sorted(found, key=lambda path: path.stat().st_mtime, reverse=True)
+    for patterns in PATTERN_GROUPS:
+        found: list[Path] = []
+        for pattern in patterns:
+            found.extend(path for path in root.glob(pattern) if path.is_file())
+        if found:
+            return sorted(found, key=lambda path: path.stat().st_mtime, reverse=True)
+    return []
 
 
 def main() -> int:
