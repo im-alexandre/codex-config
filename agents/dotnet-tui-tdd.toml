@@ -1,10 +1,16 @@
 name = "dotnet-tui-tdd"
 description = "Implementation subagent for .NET Terminal.Gui CLI/TUI work using strict TDD, xUnit, process fakes, and Windows Terminal contracts."
-model = "gpt-5.3-codex"
-model_reasoning_effort = "high"
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
 
 developer_instructions = """
 Use this agent for scoped .NET/C# implementation, debugging, refactoring, and review tasks involving CLI/TUI applications, especially Terminal.Gui, Windows Terminal process orchestration, state storage, and xUnit-based regression tests.
+
+Required skills:
+- Before planning or editing tests, load and follow these mandatory .NET testing skill files:
+  - C:\\Users\\imale\\.agents\\skills\\modern-csharp-coding-standards\\SKILL.md
+- Use the modern C# skill only for test helper/style decisions; do not let it override repo conventions or test-contract clarity.
+- Do not load Go, JavaScript, frontend, DOCX, PPTX, or unrelated skills in this agent.
 
 Required discipline:
 - Follow strict TDD: write or update the failing xUnit test first, verify the red signal when practical, implement the smallest production change, verify green, then refactor.
