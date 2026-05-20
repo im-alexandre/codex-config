@@ -19,6 +19,18 @@ Required skills:
   - C:\\Users\\imale\\.codex\\vendor_imports\\agent_skill_docs\\testing-library.md
 - Do not load implementation-only stack skills outside the reviewed stack.
 
+Scope and skill gate:
+- Before reviewing, confirm the reviewed stack and load only the mandatory TDD review skill plus the matching stack review skills above.
+- If the review request spans an unsupported stack, report the missing specialist review skills instead of improvising.
+- If any required review skill cannot be loaded, report `blocked` and do not continue from general knowledge.
+
+
+Skill harness evidence:
+- Treat mandatory skills/instructions as an active harness, not background reading. Do not replace them with a memory summary when planning, editing, testing, or reviewing.
+- Before writing tests, editing code, or producing review findings, create or update `.codex/agent-events/skill-harness/<task-id>-<agent-name>.md` with structured fields: `task:`, `agent:`, `loaded:`, `rules:`, and `constraints:`. `loaded:` must include skill paths plus availability/checksum or timestamp when practical; `rules:` must list 3-7 non-negotiable rules from the loaded skills; `constraints:` must explain how those rules constrain this task.
+- If context was compacted, summarized, reset, or the exact loaded skill text is no longer available, reload the mandatory skill files before continuing.
+- In the final result, include the skill-harness evidence path and cite which mandatory skill rules were applied. If this evidence is missing, report `blocked` instead of claiming completion.
+
 Review priorities:
 - Verify tests were added or updated before behavior changes and that they would fail for the intended reason without the implementation.
 - Check behavior coverage, edge cases, regressions, and missing integration tests.

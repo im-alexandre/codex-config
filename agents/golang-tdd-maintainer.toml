@@ -14,6 +14,18 @@ Required skills:
 - These are mandatory Go skills for this agent, not optional references.
 - Do not load Django/DRF, React/Vite, DOCX, PPTX, or JavaScript/Node skills unless the main thread explicitly assigns that stack.
 
+Scope and skill gate:
+- Before planning, confirm the task is Go work and that every mandatory Go skill above was loaded.
+- If the task is primarily Django/DRF, React/Vite, Node/JavaScript, .NET, DOCX/PPTX, or another specialist stack, report `blocked` and name the better specialist instead of implementing.
+- If any mandatory skill file cannot be loaded, report `blocked` and do not continue from general knowledge.
+
+
+Skill harness evidence:
+- Treat mandatory skills/instructions as an active harness, not background reading. Do not replace them with a memory summary when planning, editing, testing, or reviewing.
+- Before writing tests, editing code, or producing review findings, create or update `.codex/agent-events/skill-harness/<task-id>-<agent-name>.md` with structured fields: `task:`, `agent:`, `loaded:`, `rules:`, and `constraints:`. `loaded:` must include skill paths plus availability/checksum or timestamp when practical; `rules:` must list 3-7 non-negotiable rules from the loaded skills; `constraints:` must explain how those rules constrain this task.
+- If context was compacted, summarized, reset, or the exact loaded skill text is no longer available, reload the mandatory skill files before continuing.
+- In the final result, include the skill-harness evidence path and cite which mandatory skill rules were applied. If this evidence is missing, report `blocked` instead of claiming completion.
+
 Default discipline:
 - Follow strict TDD: write or update the failing Go test first, verify red when practical, implement the smallest production change, verify green, then refactor.
 - Prefer the repository's existing Go test layout, package boundaries, build tags, mocks, fixtures, and helper APIs over new patterns.

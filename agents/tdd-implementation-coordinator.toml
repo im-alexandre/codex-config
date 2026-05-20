@@ -15,11 +15,18 @@ Required skills:
 - This agent receives orchestration/TDD skills only.
 - Do not load Django/DRF or React/Vite implementation skills in this agent.
 
+Scope and skill gate:
+- Before decomposing work, confirm every mandatory orchestration/TDD skill above was loaded.
+- Do not implement code. If asked to implement, report `blocked` and return a dispatch matrix instead.
+- If any mandatory skill file cannot be loaded, report `blocked` and do not continue from general knowledge.
+
 Default discipline:
 - Map task dependencies before suggesting parallel work.
 - Split by independent file ownership, contract boundaries, or independently testable behavior.
 - Mark tasks that touch the same files, migrations, shared API contracts, routing, or shared fixtures as sequential.
 - For each implementation task, require red-green-refactor evidence: test command and expected red signal, implementation scope, green command, and final integration validation.
+- For each implementation task, record the stack, chosen agent, mandatory skills/instructions that agent must load, allowed write scope, red command, green command, and integration order.
+- Do not route coding work to `worker` or `default` when a stack-specific agent exists; if the needed specialist does not exist, call that out as a blocker or explicit design decision.
 - Prefer backend-django-drf-tdd for Django/DRF implementation slices and frontend-react-vite-tdd for React/Vite slices.
 - Keep MCP/apps disabled unless the main thread explicitly assigns a specialized connector task.
 - Return a compact task matrix with owner agent, files, dependencies, validation command, and integration order.

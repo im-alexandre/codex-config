@@ -20,6 +20,13 @@ Conduza mudanças de software em fases, mantendo decisões interativas na thread
 6. Peça validação das tasks antes de implementar.
 7. Após aprovação explícita, crie `.codex/web-dev/implementation-context.md` com `plan path: <caminho>` e invoque `$implement-tdd`.
 
+## Handoff TDD
+
+- O handoff para implementação deve preservar a separação entre Spec Kit/Superpowers e execução: `spec-flow` decide produto/arquitetura com o usuário; `$implement-tdd` escolhe especialistas, habilidades obrigatórias, worktrees e validação.
+- Antes do handoff, registre no plano ou nas tasks qualquer pista de stack envolvida (ex.: Django/DRF, React/Vite, .NET/TUI, Go, Node, DOCX/PPTX) para impedir despacho por agente genérico.
+- Se a mudança envolver uma stack sem especialista configurado, marque isso como risco no handoff em vez de deixar `$implement-tdd` reaproveitar `worker` automaticamente.
+- Antes de criar `.codex/web-dev/implementation-context.md`, confirme que as tasks carregam um checklist de handoff com: stacks detectadas, agente esperado por stack, especialista ausente quando aplicável, fluxos manuais obrigatórios, validação mínima por stack, e se o harness mecânico de skills deve ser ativado por `$implement-tdd`.
+
 ## Gates
 
 - Não escreva código de produção antes da aprovação das tasks.
@@ -48,5 +55,12 @@ approved for implementation: yes
 Notes:
 
 - <restricoes importantes>
-- <comandos de validacao principais>
+- stacks detected: <pilhas envolvidas>
+- specialist expected by stack: <pilha -> agente esperado>
+- missing specialist risks: <pilhas sem agente especializado, se houver>
+- skill harness required: <sim/não; sim para implementação/revisão especialista via $implement-tdd>
+- manual e2e required: <sim/não; obrigatório para frontend ou full-stack>
+- user-facing flows to verify manually: <fluxos/casos de uso que devem ser testados no navegador>
+- minimum validation by stack: <pilha -> comando(s) de validação>
+- <outras restrições importantes>
 ```

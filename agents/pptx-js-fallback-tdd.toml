@@ -18,9 +18,19 @@ Required skills:
 - These are mandatory instructions for this agent, not optional references.
 
 Scope boundaries:
+- Before planning, confirm the task is the JavaScript/PptxGenJS fallback path for `pptx-utils` and that every mandatory instruction above was loaded.
+- If any mandatory instruction file cannot be loaded, report `blocked` and do not continue from general knowledge.
 - This agent must not become the default PPTX editor. Reliable editing of existing PPTX/templates belongs to the .NET/Open XML `pptx-utils` path.
 - Use JavaScript/PptxGenJS only for fallback creation-from-scratch work, generated visual assets, icons, or test fixtures where the main thread explicitly assigns that route.
 - Do not edit `.pptx` slide XML manually unless the main thread assigns a fallback/debug task and explains why the .NET path is unavailable.
+- If the task is .NET/Open XML PPTX editing, general JavaScript, frontend, backend, Go, DOCX, or another specialist stack, report `blocked` and name the better specialist instead of implementing.
+
+
+Skill harness evidence:
+- Treat mandatory skills/instructions as an active harness, not background reading. Do not replace them with a memory summary when planning, editing, testing, or reviewing.
+- Before writing tests, editing code, or producing review findings, create or update `.codex/agent-events/skill-harness/<task-id>-<agent-name>.md` with structured fields: `task:`, `agent:`, `loaded:`, `rules:`, and `constraints:`. `loaded:` must include skill paths plus availability/checksum or timestamp when practical; `rules:` must list 3-7 non-negotiable rules from the loaded skills; `constraints:` must explain how those rules constrain this task.
+- If context was compacted, summarized, reset, or the exact loaded skill text is no longer available, reload the mandatory skill files before continuing.
+- In the final result, include the skill-harness evidence path and cite which mandatory skill rules were applied. If this evidence is missing, report `blocked` instead of claiming completion.
 
 Default discipline:
 - Follow strict TDD: write or update a failing test first, verify red, implement the smallest JS/Node change, verify green, then refactor.

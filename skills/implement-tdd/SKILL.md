@@ -98,16 +98,21 @@ Direct mode should avoid dragging the whole main-thread context into the worker.
 - Django/DRF backend: `backend-django-drf-tdd`
 - React/Vite frontend: `frontend-react-vite-tdd`
 - final TDD/code review: `tdd-quality-reviewer`
-- stack-neutral implementation: `worker` with the TDD contract copied into the prompt
+- stack-neutral implementation: prefer creating or selecting a stack-specific agent before using `worker`
 - exploration-only tasks: `explorer`
 - integration/reconciliation: main thread, unless a read-only reviewer is useful
 
 Do not use a stronger model for workers unless the user explicitly requested it or the task is blocked by reasoning complexity.
 
+Do not route code changes through a generic fallback agent when a stack-specific agent exists. If no suitable specialist exists, stop and either ask for a specialist to be created or use `worker` only for a tiny, clearly stack-neutral edit with the full TDD contract, mandatory skill/load checklist, write scope, and validation command copied into the prompt.
+
 ## TDD Contract For Implementers
 
 Every implementation subagent must:
 
+0. confirm the assigned stack is in scope for that agent and load every mandatory skill/instruction file before planning or editing;
+0.1. treat those mandatory skills/instructions as an active harness, not a summarized hint: if context was compacted, summarized, reset, or the exact loaded skill text is no longer available, reload the mandatory skill files before continuing;
+0.2. write structured skill-harness evidence to `.codex/agent-events/skill-harness/<task-id>-<agent-name>.md` before tests, code edits, or review findings. The evidence must use `task:`, `agent:`, `loaded:`, `rules:`, and `constraints:` fields; `loaded:` lists skill paths plus availability/checksum or timestamp when practical, `rules:` lists 3-7 non-negotiable rules from those skills, and `constraints:` explains how each rule constrains the current task;
 1. write or update tests first;
 2. cover the happy path and error paths for incorrect calls, invalid input, permission/validation failures, or other negative cases relevant to the slice;
 3. run the smallest targeted test command and record the red failure;
@@ -117,7 +122,9 @@ Every implementation subagent must:
 7. run any integration command assigned by the matrix;
 8. write a final result to `.codex/agent-events/results/<task-id>.md`.
 
-Implementation subagents must not stop to ask for approval on an already-approved plan. If the task scope, write scope, commands, and acceptance criteria are clear, they execute the TDD loop. They report `blocked` only when the task conflicts with scope, safety, missing information, unavailable tooling, or an impossible test/runtime condition.
+Implementation subagents must not stop to ask for approval on an already-approved plan. If the task scope, write scope, commands, and acceptance criteria are clear, they execute the TDD loop. They report `blocked` only when the task conflicts with scope, safety, missing information, unavailable tooling, missing skill-harness evidence, or an impossible test/runtime condition.
+
+Implementation subagents must reject out-of-scope work instead of improvising. A specialist agent must not silently switch stacks, load unrelated language skills, or reuse its role for another technology. If the coordinator selected the wrong agent, the subagent reports `blocked` and names the correct specialist or the missing specialist that should be created.
 
 ## Event Protocol
 
@@ -125,6 +132,10 @@ Before dispatching agents, ensure these paths exist:
 
 - `.codex/agent-events/events.jsonl`
 - `.codex/agent-events/results/`
+- `.codex/agent-events/skill-harness/`
+- `.codex/agent-events/skill-harness-required`
+
+Create `skill-harness-required` only for `$implement-tdd` specialist implementation/review runs. Its presence activates the mechanical hook guard; remove it after the implementation plan is fully integrated or clearly abandoned so ordinary project sessions are not blocked.
 
 Each subagent must append JSONL events with this schema:
 
@@ -142,22 +153,50 @@ Each subagent must append JSONL events with this schema:
 
 Each subagent emits at least `started` and `done` or `error`; use `running` or `blocked` for useful checkpoints.
 
+Skill-harness evidence format:
+
+```markdown
+# Skill Harness Evidence
+
+task: <task-id>
+agent: <agent-name>
+
+loaded:
+- path: <absolute path or skill name>
+  status: loaded
+  checksum-or-timestamp: <sha256 or mtime when practical>
+
+rules:
+- <non-negotiable rule from the loaded skill>
+
+constraints:
+- <how the rule changes this task's implementation, tests, or review>
+```
+
 ## Aggregator Pass
 
 After all implementation waves finish:
 
 1. Prefer lifecycle results from subagents first; read result files as supporting evidence.
 2. Inspect the event log for blocked/error statuses.
-3. Run the relevant targeted tests, then the broader project validation that the matrix selected.
-4. Dispatch `tdd-quality-reviewer` for a read-only review when the change is non-trivial.
-5. Integrate or resolve conflicts in the main thread.
-6. If implementation is complete and validations have run, move the implemented plan out of the active plan directory:
+3. Inspect every `.codex/agent-events/skill-harness/*.md` file for implementation/review tasks and verify the structured `task:`, `agent:`, `loaded:`, `rules:`, and `constraints:` fields name the mandatory skill paths and task-specific rules. If evidence is missing, malformed, stale, or only says the skill was summarized, treat the task as blocked and send it back to the same specialist to reload the skills.
+4. Run the relevant targeted tests, then the broader project validation that the matrix selected.
+5. Dispatch `tdd-quality-reviewer` for a read-only review when the change is non-trivial.
+6. Integrate or resolve conflicts in the main thread.
+7. For frontend or full-stack work, perform a main-thread manual end-to-end pass before closing the plan:
+   - start the backend, frontend, database, and required services locally when practical;
+   - open the UI in a browser and exercise every user-facing flow and case of use named in the spec/tasks, including happy path, validation/error states, empty/loading states, and at least one regression path per changed feature;
+   - verify the frontend is actually wired to the backend/API when the feature is full-stack, not only mocked unit behavior;
+   - record exact commands, URLs, browser/tool used, flows checked, failures found, and fixes or remaining manual-validation gaps;
+   - do not mark the plan complete if manual E2E could not run unless the final answer clearly labels the blocker and why automated validation was the only possible evidence.
+8. If implementation is complete and validations have run, move the implemented plan out of the active plan directory:
    - For `docs/superpowers/plans/<name>.md`, move to `docs/superpowers/plans/implemented/<name>.md`.
    - For `.codex/plans/<name>.md`, move to `.codex/plans/implemented/<name>.md`.
    - Create the destination directory if needed.
    - If the destination exists, append a timestamp before `.md` instead of overwriting.
    - Do not move `specs/**/plan.md` or `specs/**/tasks.md`; instead mention that Spec Kit plans remain in place.
-7. Return changed files, tests run, TDD evidence, archived plan path, conflicts resolved, and remaining risks.
+9. Remove `.codex/agent-events/skill-harness-required` after all implementation and review evidence has been inspected and the plan is either integrated or explicitly abandoned.
+10. Return changed files, tests run, TDD evidence, skill-harness evidence reviewed, manual E2E flows checked, archived plan path, conflicts resolved, and remaining risks.
 
 ## Superpowers Integration
 
