@@ -1,0 +1,78 @@
+<h2>Dashboard TUI para sessoes Codex</h2>
+<p class="subtitle">Escolha a abordagem que parece mais util para o seu uso diario.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A - Lista operacional</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;font-family:monospace;font-size:13px">
+            <strong>Projeto</strong><strong>Estado</strong><strong>Workers</strong>
+            <span>~/.codex</span><span>aguardando</span><span>2</span>
+            <span>D:/Financas</span><span>rodando</span><span>1</span>
+            <span>D:/Apps/site</span><span>parada</span><span>0</span>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="mock-button">Nova</button>
+            <button class="mock-button">Focar</button>
+            <button class="mock-button">Renomear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Lista operacional</h3>
+      <p>Uma tabela densa com acoes por tecla. Simples, rapida, boa para muitas sessoes.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B - Painel mestre/detalhe</div>
+        <div class="mockup-body" style="display:grid;grid-template-columns:45% 55%;gap:12px">
+          <div class="mock-sidebar">
+            <div>> ~/.codex  aguardando</div>
+            <div>  D:/Financas  rodando</div>
+            <div>  D:/Apps/site parada</div>
+          </div>
+          <div class="mock-content">
+            <strong>~/.codex</strong>
+            <p>Estado: aguardando permissao</p>
+            <p>Workers:</p>
+            <p>worker-docx • reviewer</p>
+            <div style="display:flex;gap:8px">
+              <button class="mock-button">Focar aba</button>
+              <button class="mock-button">Abrir worker</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Mestre/detalhe</h3>
+      <p>Lista a esquerda, detalhes e workers a direita. Minha recomendacao para v1.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C - Central com abas internas</div>
+        <div class="mockup-body">
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="mock-button">Sessoes</button>
+            <button class="mock-button">Workers</button>
+            <button class="mock-button">Projetos</button>
+          </div>
+          <div class="placeholder">Cada aba tem filtros, formularios e historico proprio.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Central completa</h3>
+      <p>Mais expansivel, mas aumenta escopo e complexidade ja na primeira versao.</p>
+    </div>
+  </div>
+</div>

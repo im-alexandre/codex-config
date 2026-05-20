@@ -1,0 +1,7 @@
+interface:
+  display_name: "Project Setup"
+  short_description: "Instala skills e plugins globais no projeto"
+  default_prompt: "Use $project-setup para listar recursos globais e instalar os selecionados no projeto."
+
+policy:
+  allow_implicit_invocation: false

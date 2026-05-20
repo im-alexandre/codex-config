@@ -3,6 +3,7 @@ description = "Default implementation subagent."
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 
+
 developer_instructions = """
 Use this agent for scoped implementation tasks.
 Keep changes small.
@@ -10,4 +11,9 @@ Return changed files and validation performed.
 """
 
 [features]
+fast_mode = true
+memories = false
 apps = false
+mcp = false
+mcps = false
+plugins = false

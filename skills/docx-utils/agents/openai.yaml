@@ -1,4 +1,4 @@
 interface:
   display_name: "docx-utils"
   short_description: "Automatiza inspeção, validação e edições auditáveis em arquivos DOCX com Open XML."
-  default_prompt: "Use docx-útils para inspeção, validação, revisões rastreadas, comentários, figuras, tabelas, equações, estilos canônicos e mutações auditáveis de documentos DOCX/Open XML."
+  default_prompt: "Use $docx-utils para inspeção, validação, revisões rastreadas, comentários, figuras, tabelas, equações, estilos canônicos e mutações auditáveis de DOCX/Open XML; para manutenção .NET, leia agents/mantenedor-dotnet-docx.md."
