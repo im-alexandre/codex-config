@@ -22,12 +22,6 @@ command = "python C:/Users/imale/.codex/hooks/force_subagent_defaults.py"
 timeout = 10
 statusMessage = "Forcing subagent defaults"
 
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = "python C:/Users/imale/.codex/skills/codex-session-tracker/scripts/script.py hook session-start"
-timeout = 5
-statusMessage = "Indexando sessão Codex"
-
 [[hooks.Stop]]
 [[hooks.Stop.hooks]]
 type = "command"
