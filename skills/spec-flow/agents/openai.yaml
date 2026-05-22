@@ -1,7 +1,7 @@
 interface:
   display_name: "Spec Flow"
-  short_description: "Orquestra spec, plano e TDD aprovado"
-  default_prompt: "Use $spec-flow para conduzir uma mudança de software desde brainstorming até implementação TDD."
+  short_description: "Orquestra constitution, spec, plano e TDD"
+  default_prompt: "Use $constitution-input para gerar o input da constitution ou $spec-flow para conduzir uma mudança até implementação TDD."
 
 policy:
   allow_implicit_invocation: false

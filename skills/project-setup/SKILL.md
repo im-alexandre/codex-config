@@ -60,14 +60,14 @@ Do not run the registration command automatically unless the user explicitly ask
 Install selected skills into:
 
 ```text
-.agents/skills/<skill-name>/
+.codex/skills/<skill-name>/
 ```
 
 Install selected plugins into:
 
 ```text
 plugins/<plugin-name>/
-.agents/plugins/marketplace.json
+.codex/.agents/plugins/marketplace.json
 ```
 
 The project marketplace entry uses `INSTALLED_BY_DEFAULT` so the plugin is discoverable when the project marketplace is registered.
@@ -87,3 +87,4 @@ The project marketplace entry uses `INSTALLED_BY_DEFAULT` so the plugin is disco
 - Do not edit global `~/.codex/config.toml`.
 - Preserve unrelated project files.
 - If a destination already exists, merge/update it with the selected global resource instead of deleting the whole project directory.
+

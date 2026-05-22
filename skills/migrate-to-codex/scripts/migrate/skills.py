@@ -1,7 +1,7 @@
 """Convert Claude Code skills and commands into Codex skills.
 
 Reads `.claude/skills/<name>/SKILL.md` and `.claude/skills/<name>.md`, then emits
-`.agents/skills/<name>/SKILL.md` plus supported helper directories for directory
+`.codex/skills/<name>/SKILL.md` plus supported helper directories for directory
 skills. Also wraps `.claude/commands/*.md` as
 one-file Codex skills. Runtime placeholders, file expansion, shell
 interpolation, and unsupported metadata are preserved with manual-review
@@ -391,3 +391,4 @@ def command_report_item(
         CODEX_SKILLS_ROOT / name / "SKILL.md",
         command_report_detail(provider, source_name),
     )
+

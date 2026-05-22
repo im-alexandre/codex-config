@@ -1,0 +1,119 @@
+{
+  "version": 3,
+  "skills": {
+    "pptx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/anthropics/skills.git",
+      "skillPath": "skills/pptx/SKILL.md",
+      "skillFolderHash": "10b3d70962e489867ddfee7da92f7da6b0eccc4f",
+      "pluginName": "document-skills",
+      "installedAt": "2026-05-15T13:00:20.357Z",
+      "updatedAt": "2026-05-15T13:00:20.357Z"
+    },
+    "xlsx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/anthropics/skills.git",
+      "skillPath": "skills/xlsx/SKILL.md",
+      "skillFolderHash": "f5fb1cdb7993b2feee8367e983e9d4d58d2eedd4",
+      "pluginName": "document-skills",
+      "installedAt": "2026-05-15T15:14:02.753Z",
+      "updatedAt": "2026-05-15T15:14:02.753Z"
+    },
+    "node": {
+      "source": "mcollina/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/mcollina/skills.git",
+      "skillPath": "skills/node/SKILL.md",
+      "skillFolderHash": "359e8c0e1843122275c113174cd6459967d3cb4f",
+      "installedAt": "2026-05-16T23:25:41.077Z",
+      "updatedAt": "2026-05-16T23:25:41.077Z"
+    },
+    "modern-javascript-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/wshobson/agents.git",
+      "skillPath": "plugins/javascript-typescript/skills/modern-javascript-patterns/SKILL.md",
+      "skillFolderHash": "4495f3ffa0a01a57e134a13afce515b5a8754c1f",
+      "installedAt": "2026-05-16T23:25:44.073Z",
+      "updatedAt": "2026-05-16T23:25:44.073Z"
+    },
+    "javascript-testing-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/wshobson/agents.git",
+      "skillPath": "plugins/javascript-typescript/skills/javascript-testing-patterns/SKILL.md",
+      "skillFolderHash": "4cf407af21684bcf061cb3d63b43553ec14b2126",
+      "installedAt": "2026-05-16T23:25:44.106Z",
+      "updatedAt": "2026-05-16T23:25:44.106Z"
+    },
+    "golang-pro": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/jeffallan/claude-skills.git",
+      "skillPath": "skills/golang-pro/SKILL.md",
+      "skillFolderHash": "e347d9842958ce46d5f0644ef6009304d648a964",
+      "installedAt": "2026-05-17T01:16:37.977Z",
+      "updatedAt": "2026-05-17T01:16:37.977Z"
+    },
+    "golang-testing": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/affaan-m/everything-claude-code.git",
+      "skillPath": "skills/golang-testing/SKILL.md",
+      "skillFolderHash": "7fad33a9354adc951ae015d008c7c6478f3f1c1b",
+      "installedAt": "2026-05-17T01:16:42.945Z",
+      "updatedAt": "2026-05-17T01:16:42.945Z"
+    },
+    "using-git-worktrees": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/obra/superpowers.git",
+      "skillPath": "skills/using-git-worktrees/SKILL.md",
+      "skillFolderHash": "13a9643fb9e4b236173f7d4b56b15dac10394f1b",
+      "installedAt": "2026-05-17T07:35:16.456Z",
+      "updatedAt": "2026-05-17T07:35:16.456Z"
+    },
+    "modern-csharp-coding-standards": {
+      "source": "aaronontheweb/dotnet-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/aaronontheweb/dotnet-skills.git",
+      "skillPath": "skills/csharp-coding-standards/SKILL.md",
+      "skillFolderHash": "8594d7907040716e6788fc1d3d0d46d4c564b53c",
+      "pluginName": "dotnet-skills",
+      "installedAt": "2026-05-17T20:10:25.309Z",
+      "updatedAt": "2026-05-17T20:10:25.309Z"
+    },
+    "csharp-xunit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/github/awesome-copilot.git",
+      "skillPath": "skills/csharp-xunit/SKILL.md",
+      "skillFolderHash": "ca9d2dfbdb73ccd77e9f75a7492be95e53d9d57a",
+      "installedAt": "2026-05-17T20:10:33.09Z",
+      "updatedAt": "2026-05-17T20:10:33.09Z"
+    },
+    "dotnet-testing-strategy": {
+      "source": "wshaddix/dotnet-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/wshaddix/dotnet-skills.git",
+      "skillPath": "skills/dotnet-testing-strategy/SKILL.md",
+      "skillFolderHash": "71cfc361e17e94041c291e18bc907398936d63ef",
+      "pluginName": "dotnet-skills",
+      "installedAt": "2026-05-17T20:10:35.63Z",
+      "updatedAt": "2026-05-17T20:10:35.63Z"
+    },
+    "dotnet-terminal-gui": {
+      "source": "wshaddix/dotnet-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/wshaddix/dotnet-skills.git",
+      "skillPath": "skills/dotnet-terminal-gui/SKILL.md",
+      "skillFolderHash": "3a59f4a4261bf457044459181258684b8b4a820b",
+      "pluginName": "dotnet-skills",
+      "installedAt": "2026-05-20T21:52:52.418Z",
+      "updatedAt": "2026-05-20T21:52:52.418Z"
+    }
+  },
+  "dismissed": {}
+}

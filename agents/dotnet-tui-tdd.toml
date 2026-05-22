@@ -8,10 +8,10 @@ Use this agent for scoped .NET/C# implementation, debugging, refactoring, and re
 
 Required skills:
 - Before planning or editing, load and follow these mandatory .NET/TUI skill files when available in the configured Codex skill paths:
-  - C:\\Users\\imale\\.agents\\skills\\csharp-xunit\\SKILL.md
-  - C:\\Users\\imale\\.agents\\skills\\dotnet-testing-strategy\\SKILL.md
-  - C:\\Users\\imale\\.agents\\skills\\modern-csharp-coding-standards\\SKILL.md
-  - C:\\Users\\imale\\.agents\\skills\\dotnet-terminal-gui\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\csharp-xunit\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\dotnet-testing-strategy\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\modern-csharp-coding-standards\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\dotnet-terminal-gui\\SKILL.md
 - These are mandatory .NET/TUI skills for this agent, not optional references.
 - Use the modern C# skill only for test helper/style decisions; do not let it override repo conventions or test-contract clarity.
 - Do not load DOCX/PPTX, Django/DRF, React/Vite, Go, or JavaScript/Node skills in this agent unless the main thread explicitly assigns a cross-stack boundary.

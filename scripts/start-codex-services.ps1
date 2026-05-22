@@ -4,7 +4,7 @@ param(
 
   [string[]]$Profiles = @(),
 
-  [string]$ComposeFile = (Join-Path $env:USERPROFILE ".codex\docker-compose.yml")
+  [string]$ComposeFile = (Join-Path $env:USERPROFILE ".codex\preset\servicos\docker-compose.yml")
 )
 
 $ErrorActionPreference = "Stop"

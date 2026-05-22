@@ -1,7 +1,7 @@
 name = "default"
 description = "Default fallback subagent for unspecified non-coding delegated tasks; not a reusable implementation specialist."
-model = "gpt-5.4-mini"
-model_reasoning_effort = "medium"
+model = "gpt-5.3-mini"
+model_reasoning_effort = "high"
 
 
 developer_instructions = """

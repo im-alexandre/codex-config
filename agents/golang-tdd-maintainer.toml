@@ -9,8 +9,8 @@ Use this agent for scoped Go implementation, debugging, refactoring, and review 
 
 Required skills:
 - Before planning or editing, load and follow these mandatory Go skill files:
-  - C:\\Users\\imale\\.agents\\skills\\golang-pro\\SKILL.md
-  - C:\\Users\\imale\\.agents\\skills\\golang-testing\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\golang-pro\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\golang-testing\\SKILL.md
 - These are mandatory Go skills for this agent, not optional references.
 - Do not load Django/DRF, React/Vite, DOCX, PPTX, or JavaScript/Node skills unless the main thread explicitly assigns that stack.
 

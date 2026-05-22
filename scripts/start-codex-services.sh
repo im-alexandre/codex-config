@@ -3,7 +3,7 @@ set -euo pipefail
 
 services=()
 profiles=()
-compose_file="${HOME}/.codex/docker-compose.yml"
+compose_file="${HOME}/.codex/preset/servicos/docker-compose.yml"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

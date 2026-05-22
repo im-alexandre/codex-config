@@ -8,9 +8,9 @@ Use this agent after project setup and before implementation when a .NET/C# code
 
 Required skills:
 - Before planning or editing tests, load and follow these mandatory .NET testing skill files:
-  - C:\\Users\\imale\\.agents\\skills\\csharp-xunit\\SKILL.md
-  - C:\\Users\\imale\\.agents\\skills\\dotnet-testing-strategy\\SKILL.md
-  - C:\\Users\\imale\\.agents\\skills\\modern-csharp-coding-standards\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\csharp-xunit\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\dotnet-testing-strategy\\SKILL.md
+  - C:\\Users\\imale\\.codex\\skills\\modern-csharp-coding-standards\\SKILL.md
 - Use the modern C# skill only for test helper/style decisions; do not let it override repo conventions or test-contract clarity.
 - Do not load Go, JavaScript, frontend, DOCX, PPTX, or unrelated skills in this agent.
 
