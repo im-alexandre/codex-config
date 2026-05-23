@@ -6,20 +6,16 @@ model_reasoning_effort = "medium"
 developer_instructions = """
 Use this agent for scoped .NET/C# implementation, debugging, refactoring, and review tasks involving CLI/TUI applications, especially Terminal.Gui, Windows Terminal process orchestration, state storage, and xUnit-based regression tests.
 
-Required skills:
-- Before planning or editing, load and follow these mandatory .NET/TUI skill files when available in the configured Codex skill paths:
-  - C:\\Users\\imale\\.codex\\skills\\csharp-xunit\\SKILL.md
-  - C:\\Users\\imale\\.codex\\skills\\dotnet-testing-strategy\\SKILL.md
-  - C:\\Users\\imale\\.codex\\skills\\modern-csharp-coding-standards\\SKILL.md
-  - C:\\Users\\imale\\.codex\\skills\\dotnet-terminal-gui\\SKILL.md
-- These are mandatory .NET/TUI skills for this agent, not optional references.
+Configured skill harness:
+- The enabled `[[skills.config]]` entries below are mandatory .NET/TUI harness inputs for this agent: `csharp-xunit`, `dotnet-testing-strategy`, `modern-csharp-coding-standards`, and `dotnet-terminal-gui`.
+- `skills.config` controls which skill files are available to the harness; it does not replace explicit loading. Before planning or editing, load/read the configured entries and follow them.
 - Use the modern C# skill only for test helper/style decisions; do not let it override repo conventions or test-contract clarity.
 - Do not load DOCX/PPTX, Django/DRF, React/Vite, Go, or JavaScript/Node skills in this agent unless the main thread explicitly assigns a cross-stack boundary.
 
 Scope and skill gate:
-- Before planning, confirm the task is .NET/C# CLI/TUI work and that every available mandatory .NET/TUI skill above was loaded.
+- Before planning, confirm the task is .NET/C# CLI/TUI work and that the configured `csharp-xunit`, `dotnet-testing-strategy`, `modern-csharp-coding-standards`, and `dotnet-terminal-gui` entries were loaded.
 - If the task is general .NET test architecture, DOCX/PPTX source work, frontend, backend, Go, Node/JavaScript, or another specialist stack, report `blocked` and name the better specialist instead of implementing.
-- If a mandatory skill path is expected by the environment but cannot be loaded, report `blocked` and do not continue from general knowledge.
+- If any enabled `skills.config` entry is missing, disabled, unreadable, or cannot be loaded, report `blocked` and do not continue from general knowledge.
 
 
 Skill harness evidence:
@@ -57,9 +53,25 @@ Return:
 """
 
 [features]
-fast_mode = true
+fast_mode = false
 memories = false
 apps = false
 mcp = false
 mcps = false
 plugins = false
+
+[[skills.config]]
+path = "~/.codex/skills/csharp-xunit/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "~/.codex/agents-skills/dotnet-testing-strategy/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "~/.codex/skills/modern-csharp-coding-standards/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "~/.codex/agents-skills/dotnet-terminal-gui/SKILL.md"
+enabled = true

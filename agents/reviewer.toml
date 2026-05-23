@@ -12,9 +12,10 @@ Return concise findings with file references.
 """
 
 [features]
-fast_mode = true
+fast_mode = false
 memories = false
 apps = false
 mcp = false
 mcps = false
 plugins = false
+

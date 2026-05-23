@@ -113,6 +113,25 @@
       "pluginName": "dotnet-skills",
       "installedAt": "2026-05-20T21:52:52.418Z",
       "updatedAt": "2026-05-20T21:52:52.418Z"
+    },
+    "tdd": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/mattpocock/skills.git",
+      "skillPath": "skills/engineering/tdd/SKILL.md",
+      "skillFolderHash": "75beb3030b4c979205dd771ff85ac600baeb68f4",
+      "pluginName": "mattpocock-skills",
+      "installedAt": "2026-05-23T02:22:37.152Z",
+      "updatedAt": "2026-05-23T02:22:37.152Z"
+    },
+    "fastapi-python": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/mindrally/skills.git",
+      "skillPath": "fastapi-python/SKILL.md",
+      "skillFolderHash": "e56436295fccaae0044ec74983246e25e3e4d900",
+      "installedAt": "2026-05-23T02:22:38.260Z",
+      "updatedAt": "2026-05-23T02:22:38.260Z"
     }
   },
   "dismissed": {}

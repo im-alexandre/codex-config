@@ -21,7 +21,6 @@ Quando o usuário invocar `$spec-flow` para uma feature, refatoração, correç�
 $constitution-input
 -> speckit-specify
 -> speckit-clarify
--> speckit-checklist
 -> speckit-plan
 -> speckit-analyze
 -> speckit-plan
@@ -35,12 +34,12 @@ Regras do workflow:
 
 - Execute `$constitution-input` antes da primeira feature do projeto ou quando `.specify/memory/constitution.md` estiver ausente, incompleta, com placeholders ou desalinhada do projeto.
 - Não pule `speckit-clarify`; se nenhuma pergunta for necessária, registre que a spec já está clara e avance.
-- Use o primeiro `speckit-checklist` para validar qualidade e completude da spec antes de planejar.
+- Use o primeiro `speckit-plan` para materializar arquitetura, contratos, riscos e validação logo após a spec aprovada.
 - Use o primeiro `speckit-analyze` para encontrar conflitos entre constitution, spec e plan antes de gerar tasks.
 - Reexecute `speckit-plan` depois do primeiro `speckit-analyze` sempre que houver achados que alterem arquitetura, gates, riscos, contratos, dados, testes ou validação.
 - Use `speckit-tasks` somente depois de plan aprovado e sem achados críticos pendentes.
 - Use o segundo `speckit-analyze` para auditar spec, plan e tasks juntos.
-- Use o checklist final como readiness gate antes do handoff para `$implement-tdd`.
+- Use o checklist final para validar qualidade e completude conjunta de spec, plan e tasks antes do readiness gate.
 - Invoque `$implement-tdd` somente depois de aprovação explícita das tasks e do readiness gate.
 - Não implemente, edite código de produção, despache agentes write-capable ou crie worktrees antes de `$implement-tdd`.
 - Se qualquer comando do Spec Kit estiver indisponível, pare no gate atual e trate como bloqueio de dependência do Spec Kit.
@@ -57,13 +56,14 @@ Durante constitution, spec, plan e tasks, dê preferência estrita a recursos, i
 
 ## Dependência do Spec Kit
 
-O `spec-flow` depende do Spec Kit para constitution, specify, clarify, checklist, plan, analyze e tasks. Não execute o fluxo completo sem Spec Kit inicializado no diretório atual.
+O `spec-flow` depende do Spec Kit para constitution, specify, clarify, plan, analyze, tasks e checklist. Não execute o fluxo completo sem Spec Kit inicializado no diretório atual.
 
 1. Detecte Spec Kit por `.specify/`, `.specify/memory/constitution.md`, `.specify/templates/`, `.specify/init-options.json`, artefatos `specs/**` ou skills/comandos `speckit-*`.
-2. Se `.specify/` não existir ou a estrutura estiver incompleta para constitution, informe o bloqueio e peça aprovação explícita antes de inicializar.
-3. Com aprovação, prefira `specify init --here --integration codex --integration-options="--skills"`.
-4. Se `specify` não estiver disponível, peça aprovação explícita para usar `uvx --from git+https://github.com/github/spec-kit.git specify init --here --integration codex --integration-options="--skills"`.
-5. Sem aprovação para inicializar ou instalar, pare. Não crie artefatos fallback fora do Spec Kit.
+2. Se não houver `.specify/` nem `specs/`, não trate isso como bloqueio estrutural adicional: apenas peça confirmação explícita para inicializar o Specify no projeto com integração Codex, skills e PowerShell usando `specify init --here --integration codex --integration-options="--skills" --force`.
+3. Se houver sinais parciais de Spec Kit mas a estrutura estiver incompleta para constitution, informe o bloqueio e peça aprovação explícita antes de inicializar ou reinicializar.
+4. Com aprovação, prefira `specify init --here --integration codex --integration-options="--skills" --force`.
+5. Se `specify` não estiver disponível, peça aprovação explícita para usar `uvx --from git+https://github.com/github/spec-kit.git specify init --here --integration codex --integration-options="--skills" --force`.
+6. Sem aprovação para inicializar ou instalar, pare. Não crie artefatos fallback fora do Spec Kit.
 
 ## `$constitution-input`
 

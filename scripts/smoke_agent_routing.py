@@ -27,6 +27,14 @@ EXPECTED = {
 }
 
 
+def read_first_existing(*relative_paths: str) -> str:
+    for relative_path in relative_paths:
+        path = ROOT / relative_path
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+    raise FileNotFoundError(f"none of the expected paths exist: {relative_paths}")
+
+
 def load_agent(name: str) -> str:
     path = ROOT / "agents" / f"{name}.toml"
     data = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -52,8 +60,14 @@ def main() -> int:
     tasks = parse_tasks()
     require(set(EXPECTED).issubset(tasks), f"missing expected task stacks: {set(EXPECTED) - set(tasks)}")
 
-    implement_tdd = (ROOT / "skills" / "implement-tdd" / "SKILL.md").read_text(encoding="utf-8")
-    prompt_contracts = (ROOT / "skills" / "implement-tdd" / "references" / "prompt-contracts.md").read_text(encoding="utf-8")
+    implement_tdd = read_first_existing(
+        "agents-skills/implement-tdd/SKILL.md",
+        "skills/implement-tdd/SKILL.md",
+    )
+    prompt_contracts = read_first_existing(
+        "agents-skills/implement-tdd/references/prompt-contracts.md",
+        "skills/implement-tdd/references/prompt-contracts.md",
+    )
     agents_readme = (ROOT / "agents" / "README.md").read_text(encoding="utf-8")
     spec_flow = (ROOT / "skills" / "spec-flow" / "SKILL.md").read_text(encoding="utf-8")
     shared_config = (ROOT / "config.shared.toml").read_text(encoding="utf-8")

@@ -1,0 +1,4 @@
+version: 1
+display_name: "React Vite"
+short_description: "React + Vite SPA development patterns including project setup, configuration, and optimization. Use for building single-page applications..."
+default_prompt: "Use this skill when: React + Vite SPA development patterns including project setup, configuration, and optimization. Use for building single-page applications with Vite bundler."

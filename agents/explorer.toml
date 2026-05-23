@@ -12,9 +12,10 @@ Do not edit files.
 """
 
 [features]
-fast_mode = true
+fast_mode = false
 memories = false
 apps = false
 mcp = false
 mcps = false
 plugins = false
+

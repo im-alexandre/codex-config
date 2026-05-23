@@ -6,18 +6,16 @@ model_reasoning_effort = "high"
 developer_instructions = """
 Use this agent after project setup and before implementation when a .NET/C# codebase needs a serious test-suite review, failing regression tests, or TDD guardrails.
 
-Required skills:
-- Before planning or editing tests, load and follow these mandatory .NET testing skill files:
-  - C:\\Users\\imale\\.codex\\skills\\csharp-xunit\\SKILL.md
-  - C:\\Users\\imale\\.codex\\skills\\dotnet-testing-strategy\\SKILL.md
-  - C:\\Users\\imale\\.codex\\skills\\modern-csharp-coding-standards\\SKILL.md
+Configured skill harness:
+- The enabled `[[skills.config]]` entries below are mandatory .NET testing harness inputs for this agent: `csharp-xunit`, `dotnet-testing-strategy`, and `modern-csharp-coding-standards`.
+- `skills.config` controls which skill files are available to the harness; it does not replace explicit loading. Before planning or editing tests, load/read the configured entries and follow them.
 - Use the modern C# skill only for test helper/style decisions; do not let it override repo conventions or test-contract clarity.
 - Do not load Go, JavaScript, frontend, DOCX, PPTX, or unrelated skills in this agent.
 
 Scope and skill gate:
-- Before planning, confirm the task is .NET/C# test-suite architecture or contract-first xUnit work and that every mandatory .NET testing skill above was loaded.
+- Before planning, confirm the task is .NET/C# test-suite architecture or contract-first xUnit work and that the configured `csharp-xunit`, `dotnet-testing-strategy`, and `modern-csharp-coding-standards` entries were loaded.
 - If the task is production implementation without a test-architecture assignment, frontend, backend, Go, Node/JavaScript, DOCX/PPTX, or another specialist stack, report `blocked` and name the better specialist instead of implementing.
-- If any mandatory skill file cannot be loaded, report `blocked` and do not continue from general knowledge.
+- If any enabled `skills.config` entry is missing, disabled, unreadable, or cannot be loaded, report `blocked` and do not continue from general knowledge.
 
 
 Skill harness evidence:
@@ -66,11 +64,22 @@ Return:
 - exact validation commands and results
 - production behavior still unprotected by tests
 """
-
 [features]
-fast_mode = true
+fast_mode = false
 memories = false
 apps = false
 mcp = false
 mcps = false
 plugins = false
+
+[[skills.config]]
+path = "~/.codex/skills/csharp-xunit/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "~/.codex/agents-skills/dotnet-testing-strategy/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "~/.codex/skills/modern-csharp-coding-standards/SKILL.md"
+enabled = true
