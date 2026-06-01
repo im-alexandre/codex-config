@@ -1,7 +1,7 @@
 name = "explorer"
 description = "Default exploration subagent."
-model = "gpt-5.4-mini"
-model_reasoning_effort = "medium"
+model = "gpt-5.3-codex-spark"
+model_reasoning_effort = "high"
 
 sandbox_mode = "read-only"
 
@@ -12,9 +12,10 @@ Do not edit files.
 """
 
 [features]
-fast_mode = true
+fast_mode = false
 memories = false
 apps = false
 mcp = false
 mcps = false
 plugins = false
+

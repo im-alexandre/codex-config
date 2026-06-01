@@ -18,15 +18,15 @@ Docs last checked: 2026-04-20. If today's date is later, re-open the official Co
 
 | Source | Codex | Migration behavior | Caveat |
 | --- | --- | --- | --- |
-| `.claude/commands/*.md` | `.agents/skills/source-command-<name>/SKILL.md` | Converted to one-file Codex skills | Slash-command invocation, `argument-hint`, `allowed-tools`, `$ARGUMENTS`, shell-output interpolation, and file-reference expansion are preserved as manual-review text. |
+| `.claude/commands/*.md` | `.codex/skills/source-command-<name>/SKILL.md` | Converted to one-file Codex skills | Slash-command invocation, `argument-hint`, `allowed-tools`, `$ARGUMENTS`, shell-output interpolation, and file-reference expansion are preserved as manual-review text. |
 | Command files with runtime expansion | One-file Codex skills plus `manual_fix_required` rows | Preserved as prompt text | Argument placeholders, shell-output interpolation, automatic file expansion, model/agent routing, and executable hook behavior have different runtime behavior and must be checked manually. |
 
 ## Skills
 
 | Source | Codex | Migration behavior | Caveat |
 | --- | --- | --- | --- |
-| `.claude/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` | Converted; selected support directories are copied | Skill-local `scripts/`, `references/`, and `assets/` are copied when they are real files under the source skill root. |
-| `.claude/skills/<name>.md` | `.agents/skills/<name>/SKILL.md` | Converted as a single-file skill | No sibling support directories are copied for this legacy shape. |
+| `.claude/skills/<name>/SKILL.md` | `.codex/skills/<name>/SKILL.md` | Converted; selected support directories are copied | Skill-local `scripts/`, `references/`, and `assets/` are copied when they are real files under the source skill root. |
+| `.claude/skills/<name>.md` | `.codex/skills/<name>/SKILL.md` | Converted as a single-file skill | No sibling support directories are copied for this legacy shape. |
 | `allowed-tools` | No strict skill allowlist | Preserved as prompt guidance in `SKILL.md` | `agents/openai.yaml` can declare tool dependencies, but that is not a permission boundary. |
 | `user-invocable` | `policy.allow_implicit_invocation` | Manual review only | Similar intent, not equivalent semantics. |
 | `model` / `effort` | No skill-level model pin | Unsupported | Codex model selection is session/agent scoped in this converter. |
@@ -68,11 +68,11 @@ Docs last checked: 2026-04-20. If today's date is later, re-open the official Co
 | Source | Codex | Migration behavior | Caveat |
 | --- | --- | --- | --- |
 | `.claude/plugins/` | Codex plugins / skills / MCP servers / apps | Reported as `manual_fix_required` only | Codex plugins can bundle skills, MCP servers, and apps, but the migrator does not copy plugin trees. Migrate the plugin, bundled skills, commands, agents, hooks, and MCP config by hand. |
-| `.claude/plugin-marketplaces.json` | Codex plugin install or local plugin path | Reported as `manual_fix_required` only | Marketplace entries can point to local or remote plugin sources; the migrator does not fetch or install them. Codex marketplace metadata lives under `.agents/plugins/marketplace.json` or `~/.agents/plugins/marketplace.json`. |
+| `.claude/plugin-marketplaces.json` | Codex plugin install or local plugin path | Reported as `manual_fix_required` only | Marketplace entries can point to local or remote plugin sources; the migrator does not fetch or install them. Codex marketplace metadata lives under `.codex/.agents/plugins/marketplace.json` or `~/.codex/.agents/plugins/marketplace.json`. |
 | `.claude-plugin/marketplace.json` | Codex plugin install or local plugin path | Reported as `manual_fix_required` only | Treat it as marketplace source material. Do not copy it into Codex as a legacy marketplace; adapt it to the Codex plugin marketplace layout if you keep it local. |
 | `metadata.pluginRoot` | No direct equivalent | Unsupported | Shorthand plugin sources that depend on `metadata.pluginRoot` need manual layout. |
 | Marketplace or `plugin.json` custom `skills` / `agents` paths | Codex plugin manifest and bundled skill paths | Manual review only | Codex plugins can declare bundled skills, MCP servers, and apps. Custom Claude plugin paths still need manual layout review; no automated scan. |
-| Plugin `commands/` | `.agents/skills/<name>/SKILL.md` | Manual | Treat like any other command migration if you copy files by hand. |
+| Plugin `commands/` | `.codex/skills/<name>/SKILL.md` | Manual | Treat like any other command migration if you copy files by hand. |
 | `strict`, `hooks`, `mcpServers`, `lspServers`, `outputStyles` | No direct equivalent | Unsupported | No automatic plugin config import. |
 
 ## Hooks
@@ -165,3 +165,5 @@ Don't use these tools:
 - https://code.claude.com/docs/en/settings
 - https://code.claude.com/docs/en/plugins
 - https://code.claude.com/docs/en/plugin-marketplaces
+
+

@@ -525,7 +525,7 @@ def migration_skill_artifacts(source_root: Path) -> list[PlannedArtifact]:
         artifacts.append(
             PlannedArtifact(
                 relative_path=Path(scope_name)
-                / ".agents"
+                / ".codex"
                 / "skills"
                 / "migrate-to-codex"
                 / "SKILL.md",
@@ -537,7 +537,7 @@ def migration_skill_artifacts(source_root: Path) -> list[PlannedArtifact]:
             PlannedArtifact.from_source_file(
                 SKILL_ROOT / "references" / "differences.md",
                 Path(scope_name)
-                / ".agents"
+                / ".codex"
                 / "skills"
                 / "migrate-to-codex"
                 / "references"
@@ -747,7 +747,7 @@ def main() -> None:
         "--mcp", action="store_true", help="Write MCP/settings to config.toml."
     )
     parser.add_argument(
-        "--skills", action="store_true", help="Write skills under .agents/skills."
+        "--skills", action="store_true", help="Write skills under .codex/skills."
     )
     parser.add_argument(
         "--subagents", action="store_true", help="Write agents under .codex/agents."

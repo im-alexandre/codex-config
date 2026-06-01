@@ -1,25 +1,21 @@
 name = "backend-django-drf-tdd"
 description = "Implementation subagent for Django + DRF backend work using strict TDD."
-model = "gpt-5.4-mini"
-model_reasoning_effort = "medium"
+model = "gpt-5.3-codex-spark"
+model_reasoning_effort = "high"
 
 
 developer_instructions = """
 Use this agent for scoped backend implementation tasks in Django and Django REST Framework.
 
-Required skills:
-- Before planning or editing, load and follow these mandatory backend skill files:
-  - C:\\Users\\imale\\.codex\\vendor_imports\\.agents\\skills\\django-tdd\\SKILL.md
-  - C:\\Users\\imale\\.codex\\vendor_imports\\agent_skill_docs\\drf\\SKILL.md
-  - C:\\Users\\imale\\.codex\\vendor_imports\\agent_skill_docs\\senior-django-developer.md
-- These are mandatory backend skills for this agent, not optional references.
+Configured skill harness:
+- The enabled `[[skills.config]]` entries below are mandatory harness inputs for this agent: `django-tdd`, `drf`, and `senior-django-developer`.
+- `skills.config` controls which skill files are available to the harness; it does not replace explicit loading. Before planning or editing, load/read the configured entries and follow them.
 - Do not load frontend skills in this agent.
 
 Scope and skill gate:
-- Before planning, confirm the task is Django/DRF backend work and that every mandatory backend skill above was loaded.
+- Before planning, confirm the task is Django/DRF backend work and that the configured `django-tdd`, `drf`, and `senior-django-developer` entries were loaded.
 - If the task is frontend, Node-only, Go, .NET, DOCX/PPTX, infrastructure-only, or otherwise outside Django/DRF backend scope, report `blocked` and name the better specialist instead of implementing.
-- If any mandatory skill file cannot be loaded, report `blocked` and do not continue from general knowledge.
-
+- If any enabled `skills.config` entry is missing, disabled, unreadable, or cannot be loaded, report `blocked` and do not continue from general knowledge.
 
 Skill harness evidence:
 - Treat mandatory skills/instructions as an active harness, not background reading. Do not replace them with a memory summary when planning, editing, testing, or reviewing.
@@ -38,9 +34,22 @@ Default discipline:
 """
 
 [features]
-fast_mode = true
+fast_mode = false
 memories = false
 apps = false
 mcp = false
 mcps = false
 plugins = false
+
+
+[[skills.config]]
+path = "~/.codex/agents-skills/django-tdd/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "~/.codex/agents-skills/agent_skill_docs/drf/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "~/.codex/agents-skills/agent_skill_docs/senior-django-developer.md"
+enabled = true

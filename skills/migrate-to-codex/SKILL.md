@@ -34,7 +34,7 @@ Run the migration in this order for each selected global or project source:
    - instructions: `CLAUDE.md` / `AGENTS.md` to `AGENTS.md`
    - plugins: report Claude plugin trees and marketplaces as manual migration work
    - hooks: rewrite supported Claude hooks into `.codex/hooks.json` and enable `[features].codex_hooks = true`
-   - skills and commands: write Codex skills under `.agents/skills/`
+   - skills and commands: write Codex skills under `.codex/skills/`
    - config: write `.codex/config.toml` from Claude model/sandbox settings and MCP servers, including `personality = "friendly"` when config is generated
    - subagents: write Codex custom agents under `.codex/agents/`
 
@@ -42,7 +42,7 @@ Run the migration in this order for each selected global or project source:
 
 6. Inspect the terminal output and `.codex/migrate-to-codex-report.txt` after real runs.
 
-7. Review generated artifacts in this order: `AGENTS.md`, `.agents/skills/`, `.codex/config.toml`, `.codex/hooks.json`, `.codex/agents/`, then report-only plugin items.
+7. Review generated artifacts in this order: `AGENTS.md`, `.codex/skills/`, `.codex/config.toml`, `.codex/hooks.json`, `.codex/agents/`, then report-only plugin items.
 
 8. Run `--validate-target` against each target after edits.
 
@@ -112,3 +112,4 @@ Run the post-migration validator against each target after edits.
    ```
 
 Run `$MIGRATE_TO_CODEX --help` for flags (`--scan-only`, `--plan`, `--doctor`, `--validate-target`, defaults, and so on). Deep tables and more links are in `references/differences.md`.
+
