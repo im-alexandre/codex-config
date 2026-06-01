@@ -110,3 +110,4 @@ computer-use-turn-ended
 .playwright-cli
 codex-session-tracker.sqlite-shm
 codex-session-tracker.sqlite-wal
+/skills/.system/plugin-creator
