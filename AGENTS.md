@@ -15,51 +15,6 @@
 - If you disagree, including when it is only a strong intuition, push back clearly and respectfully.
 - Never say "You are absolutely right" or any equivalent phrase. This level of deference is insulting to the user.
 
-## Precedence
-
-- Project-level and directory-level `AGENTS.md` files may add stricter project-specific rules.
-- Project-level rules must not weaken global safety, MCP, or cleanup rules.
-- If rules conflict, follow the most specific rule that does not weaken global safety requirements.
-
-## File Encoding
-
-- When writing files, use UTF-8 encoding.
-
-## Tool Permissions
-
-- Do not set `sandbox_permissions` on tool calls when approval policy is `never`; those calls will be rejected. Run permitted commands directly within the active sandbox policy.
-
-## DOCX Revision And Comment Authors
-
-- For any reading, inspection, editing, rewriting, validation, synchronization, revision, comment, or other operation that touches a `.docx`, use the `docx-utils` skill/tooling.
-- Execute `docx-utils` through the published binary/shim by default; do not use `dotnet run --project` unless developing, debugging, or recovering from a broken/missing binary.
-- If the needed `docx-utils` capability fails, run `docx-utils --help` to review available commands, calling forms, and examples.
-- If no command exists for the needed DOCX operation, log the missing capability in the `docx-utils` skill backlog for future implementation by the skill maintainer/agent maintainer.
-- When the main thread adds a revision or comment to a `.docx` through `docx-utils`, it must omit `--author`; `docx-utils` automatically chooses the next available author in the document.
-- Subagents that add revisions or comments to a `.docx` must pass `--author` explicitly with the assigned subagent name.
-
-## Codex project initialization
-
-When I ask to initialize/start/bootstrap a project, do this before project work:
-
-1. Run:
-
-`powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\scripts\bootstrap-codex-project.ps1" -ProjectPath "<current working directory>"`
-
-2. Show available MCP presets from `~/.codex/presets/mcp`.
-3. Ask which presets should be enabled.
-4. Generate or update the project-local `.codex/config.toml`.
-5. Keep global `~/.codex/config.toml` clean.
-6. Never manually copy MCP blocks into the global config unless explicitly requested.
-
-## Web-Dev Parallel Agent Worktrees
-
-- When the web-dev flow, `$implement-tdd`, or any web-dev plugin orchestration dispatches write-capable agents in parallel, each agent must work in its own git worktree and task branch.
-- Before dispatch, identify the reference branch explicitly and pass each agent its assigned worktree path, task branch, and reference branch.
-- Agents must edit, test, and write their result files only inside their assigned worktree.
-- After parallel agents finish, integrate their work strictly sequentially: reconcile one worktree with the current reference branch, resolve conflicts, rerun validation, merge it into the reference branch, then move to the next worktree.
-- Never resolve conflicts or merge multiple parallel worktrees at the same time. If the reference branch advances after one merge, each later worktree must reconcile against the updated reference branch before merging.
-
 ## Output Policy
 
 - Keep final responses concise.
@@ -69,3 +24,58 @@ When I ask to initialize/start/bootstrap a project, do this before project work:
   - validation/tests;
   - pending risks or next action.
 - Avoid long explanations unless requested.
+
+## Reuse-First / No-Reimplementation Policy
+
+When the task involves a library, framework, SDK, CLI, or existing project abstraction, the implementation must reuse that abstraction directly.
+
+Do not reimplement behavior that is already provided by:
+
+- installed dependencies;
+- official framework/library APIs;
+- existing project modules, services, adapters, helpers, or utilities.
+
+The task is to integrate, configure, wrap, or call the existing abstraction — not to recreate it.
+
+Before editing files, identify:
+
+1. the existing abstraction/library/module to reuse;
+2. the expected import(s);
+3. the project files that should call it;
+4. what must not be reimplemented.
+
+If custom code is necessary, keep it as thin glue code only.
+
+Custom implementations are forbidden unless the agent explicitly documents:
+
+1. which existing abstraction was considered;
+2. why it is insufficient;
+3. why the custom code is unavoidable;
+4. how the implementation avoids duplicating library behavior.
+
+Examples:
+
+- Use `langchain_postgres.PGVector`, `PGVectorStore`, or `PGEngine` instead of manually implementing pgvector queries.
+- Use LangChain vector store APIs instead of custom similarity SQL.
+- Use Django ORM, DRF serializers, and framework auth/session primitives instead of custom equivalents.
+- Use PyMuPDF, rispy, or existing parsers/loaders instead of custom parsers unless explicitly requested.
+
+Reject and refactor any implementation that:
+
+- writes manual vector similarity SQL when LangChain/Postgres abstractions are available;
+- creates a custom vector store/repository duplicating PGVector or PGVectorStore;
+- creates custom embedding persistence logic already handled by the library;
+- creates wrappers that merely rename an existing library call without project-specific value.
+
+<!-- context7 -->
+Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
+
+Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+
+## Steps
+
+1. Always start with `resolve-library-id` using the library name and the user's question, unless the user provides an exact library ID in `/org/project` format
+2. Pick the best match (ID format: `/org/project`) by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). If results don't look right, try alternate names or queries (e.g., "next.js" not "nextjs", or rephrase the question). Use version-specific IDs when the user mentions a version
+3. `query-docs` with the selected library ID and the user's full question (not single words)
+4. Answer using the fetched docs
+<!-- context7 -->

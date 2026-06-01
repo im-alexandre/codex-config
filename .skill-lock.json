@@ -132,6 +132,60 @@
       "skillFolderHash": "e56436295fccaae0044ec74983246e25e3e4d900",
       "installedAt": "2026-05-23T02:22:38.260Z",
       "updatedAt": "2026-05-23T02:22:38.260Z"
+    },
+    "playwright-cli": {
+      "source": "microsoft/playwright-cli",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/microsoft/playwright-cli.git",
+      "skillPath": "skills/playwright-cli/SKILL.md",
+      "skillFolderHash": "7f1be9aef5c4435ed99dc74a383ca814d05c82c5",
+      "installedAt": "2026-05-24T20:46:56.847Z",
+      "updatedAt": "2026-05-24T20:46:56.847Z"
+    },
+    "react-vite": {
+      "source": "alicoder001/agent-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/alicoder001/agent-skills.git",
+      "skillPath": "frontend/react-vite/SKILL.md",
+      "skillFolderHash": "91a5293b61ecc0b4add59e8aeac75b47b6736d9a",
+      "installedAt": "2026-06-01T09:38:26.005Z",
+      "updatedAt": "2026-06-01T09:38:26.005Z"
+    },
+    "frontend-testing": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/langgenius/dify.git",
+      "skillPath": ".agents/skills/frontend-testing/SKILL.md",
+      "skillFolderHash": "3f20d54243d86f8b1faebd57d5451841a8dc2bbc",
+      "installedAt": "2026-06-01T09:38:38.380Z",
+      "updatedAt": "2026-06-01T09:38:38.380Z"
+    },
+    "testing-library": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/claude-dev-suite/claude-dev-suite.git",
+      "skillPath": "skills/testing/testing-library/SKILL.md",
+      "skillFolderHash": "cd41f671f07a863b11fc199033340ca5d298216f",
+      "installedAt": "2026-06-01T09:38:51.983Z",
+      "updatedAt": "2026-06-01T09:38:51.983Z"
+    },
+    "context7-cli": {
+      "source": "upstash/context7",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/upstash/context7.git",
+      "skillPath": "skills/context7-cli/SKILL.md",
+      "skillFolderHash": "325b0274b730df3a01ed7c0fe0f5b0c2bd74715d",
+      "installedAt": "2026-06-01T12:34:55.132Z",
+      "updatedAt": "2026-06-01T12:34:55.132Z"
+    },
+    "context7-mcp": {
+      "source": "upstash/context7",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/upstash/context7.git",
+      "skillPath": "skills/context7-mcp/SKILL.md",
+      "skillFolderHash": "49e037db730a57e8c1f131a3f86845cb6eca72d9",
+      "installedAt": "2026-06-01T13:00:22.780Z",
+      "updatedAt": "2026-06-01T13:00:22.780Z"
     }
   },
   "dismissed": {}
