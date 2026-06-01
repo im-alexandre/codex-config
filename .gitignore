@@ -116,3 +116,4 @@ rules/default.rules
 goals_1.sqlite-shm
 goals_1.sqlite-wal
 skills/.system/
+/skills/.system
