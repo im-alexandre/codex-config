@@ -1,6 +1,6 @@
 ---
 name: coolify-deploy
-description: Automate and validate Coolify deployments through the Coolify API using Python requests for GitHub-backed Docker Compose apps. Use when the user asks to publish, deploy, create a Coolify project/environment/application, configure runtime env vars, trigger a deployment, inspect deployment status/logs, or validate a public domain after deploy, especially with deploy_coolify.md, docker-compose.yml, Dockerfile, .env.example, and COOLIFY_API_KEY.
+description: Automate and validate Coolify deployments through the Coolify API using Python requests for GitHub-backed Docker Compose apps. Use when the user asks to publish, deploy, create a Coolify project/environment/application, configure runtime env vars, patch Docker Compose domains, trigger a deployment, inspect deployment status/logs, or validate a public domain after deploy, especially with deploy_coolify.md, docker-compose.yml, Dockerfile, .env.example, and COOLIFY_API_KEY.
 ---
 
 # Coolify Deploy
@@ -12,7 +12,7 @@ description: Automate and validate Coolify deployments through the Coolify API u
 3. Commit and push deploy changes before asking Coolify to build. Coolify deploys from the remote branch, not local uncommitted files.
 4. When the target project, environment, domain, application, and auto-deploy branch already exist and are healthy, do not trigger a manual redeploy for every code change. Push the target branch and monitor the deployment created by the GitHub App/webhook instead. Trigger deploy manually only for initial provisioning, changed Coolify configuration/env vars, disabled or failed auto-deploy, or an explicit user request.
 5. Authenticate with `COOLIFY_API_KEY` from the environment. Do not print token values or generated secrets.
-6. Use the Coolify API idempotently: find or create project, environment, application, env vars, then deploy by application UUID and poll deployment status.
+6. Use the Coolify API idempotently: find or create project, environment, application, env vars, patch Docker Compose domains when needed, then deploy by application UUID and poll deployment status.
 7. Validate the public domain by direct HTTP/HTTPS requests to `/` and expected API routes. Report exact status codes and Coolify UUIDs.
 
 ## Defaults
@@ -20,6 +20,8 @@ description: Automate and validate Coolify deployments through the Coolify API u
 - Default base URL: `https://coolify.drg.ink`, unless `COOLIFY_URL` is set or the user provides another URL.
 - Prefer branch `master` only when it is current and pushed; otherwise use the branch the user explicitly requests.
 - For Docker Compose apps, pass `docker_compose_location` with a leading slash, for example `/docker-compose.yml`.
+- For Docker Compose app domains, do not rely only on creation payloads or MCP wrappers. After the app exists, patch `PATCH /api/v1/applications/{uuid}` with `docker_compose_domains`, `force_domain_override=true`, and `instant_deploy=true` when the requested public domain must be enforced.
+- For Docker Compose app domains, do not add or preserve manual Traefik `custom_labels` for host routing. They can override or confuse Coolify-managed domain interpolation.
 - Use `build_pack=dockercompose`, `ports_exposes=80`, `is_auto_deploy_enabled=true`, and `is_force_https_enabled=true` unless the repo says otherwise.
 - If Coolify creates an automatic `production` environment but the requested environment is `prod`, create/use `prod`; remove the empty automatic environment only when it has no resources and the runbook requires `prod`.
 
@@ -41,6 +43,7 @@ Use `scripts/deploy_coolify.py` for the repeatable path. It uses `requests` and:
 - triggers a force deploy;
 - polls deployment status;
 - validates root and API URLs.
+- patches Docker Compose domains after app creation or reuse.
 
 Example:
 
@@ -63,3 +66,17 @@ python C:\Users\imale\.codex\skills\coolify-deploy\scripts\deploy_coolify.py `
 Add custom envs with repeated `--env KEY=VALUE`. Use `--skip-deploy` only for provisioning without publishing.
 
 If the script fails because a Coolify endpoint changed, inspect official API docs and retry with the smallest correction.
+
+## Docker Compose Domain Rule
+
+For Docker Compose resources, the reliable path is:
+
+1. create or reuse the application;
+2. `PATCH /api/v1/applications/{uuid}` with:
+   - `docker_compose_domains`;
+   - `force_domain_override=true`;
+   - `instant_deploy=true` when the domain change should apply immediately;
+3. if the resource still has manual Traefik `custom_labels` for routing, stop and remove them before trusting the result;
+4. only then validate the public host and proxy routing.
+
+If MCP tools do not expose `docker_compose_domains`, prefer the direct HTTP API for that step instead of trying to force `fqdn`, generic `domains` fields, or manual Traefik labels.

@@ -101,6 +101,30 @@ def env_payload(envs: dict[str, str]) -> dict[str, Any]:
     }
 
 
+def normalize_domain(value: str) -> str:
+    return value if value.startswith(("http://", "https://")) else f"https://{value}"
+
+
+def domain_patch_payload(service_name: str, domain: str, *, instant_deploy: bool) -> dict[str, Any]:
+    return {
+        "docker_compose_domains": [
+            {
+                "name": service_name,
+                "domain": normalize_domain(domain),
+            }
+        ],
+        "force_domain_override": True,
+        "instant_deploy": instant_deploy,
+    }
+
+
+def has_manual_routing_labels(value: Any) -> bool:
+    if not value:
+        return False
+    text = str(value)
+    return "traefik.http.routers." in text or "traefik.http.services." in text
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coolify-url", default=os.environ.get("COOLIFY_URL", "https://coolify.drg.ink"))
@@ -186,7 +210,6 @@ def main() -> int:
                 "build_pack": "dockercompose",
                 "docker_compose_location": args.compose_location,
                 "ports_exposes": args.ports_exposes,
-                "docker_compose_domains": [{"name": args.service_name, "domain": args.domain}],
                 "is_auto_deploy_enabled": True,
                 "is_force_https_enabled": True,
                 "instant_deploy": False,
@@ -196,6 +219,19 @@ def main() -> int:
     else:
         print(f"existing_app_uuid={app['uuid']}")
     app_uuid = app["uuid"]
+
+    if has_manual_routing_labels(app.get("custom_labels")):
+        raise SystemExit(
+            "Coolify application has manual Traefik custom_labels for routing. "
+            "Remove them before using docker_compose_domains automation."
+        )
+
+    domain_payload = domain_patch_payload(args.service_name, args.domain, instant_deploy=not args.skip_deploy)
+    client.patch(f"/api/v1/applications/{app_uuid}", domain_payload)
+    print(
+        "patched_docker_compose_domains="
+        f"{args.service_name}:{normalize_domain(args.domain)} instant_deploy={str(not args.skip_deploy).lower()}"
+    )
 
     existing_runtime_env: dict[str, str] = {}
     try:
