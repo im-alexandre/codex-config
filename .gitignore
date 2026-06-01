@@ -111,3 +111,4 @@ computer-use-turn-ended
 codex-session-tracker.sqlite-shm
 codex-session-tracker.sqlite-wal
 /skills/.system/plugin-creator
+rules/default.rules
