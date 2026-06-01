@@ -63,10 +63,6 @@ command = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.code
 timeout = 10
 statusMessage = "Enviando notificação"
 
-[agents]
-max_threads = 10
-max_depth = 1
-
 [windows]
 sandbox = "elevated"
 
