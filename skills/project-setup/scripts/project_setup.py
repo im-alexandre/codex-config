@@ -16,7 +16,6 @@ from typing import Any
 HOME = Path.home()
 GLOBAL_SKILL_ROOTS = (
     ("codex", HOME / ".codex" / "skills"),
-    ("agents", HOME / ".agents" / "skills"),
 )
 GLOBAL_CONFIG = HOME / ".codex" / "config.toml"
 
@@ -98,9 +97,9 @@ def marketplace_roots(config: dict[str, Any]) -> dict[str, Path]:
         source = data.get("source")
         if source:
             roots[name] = Path(str(source).replace("\\\\?\\", ""))
-    local_home_marketplace = HOME / ".agents" / "plugins" / "marketplace.json"
+    local_home_marketplace = HOME / ".codex" / ".agents" / "plugins" / "marketplace.json"
     if local_home_marketplace.is_file():
-        roots.setdefault("imale-local", HOME)
+        roots.setdefault("imale-local", HOME / ".codex")
     return roots
 
 
@@ -182,7 +181,7 @@ def copytree(src: Path, dst: Path) -> None:
 
 
 def ensure_marketplace(project_root: Path) -> Path:
-    marketplace_path = project_root / ".agents" / "plugins" / "marketplace.json"
+    marketplace_path = project_root / ".codex" / ".agents" / "plugins" / "marketplace.json"
     marketplace_path.parent.mkdir(parents=True, exist_ok=True)
     if marketplace_path.exists():
         return marketplace_path
@@ -242,7 +241,7 @@ def install(selection_path: Path, project_root: Path) -> dict[str, Any]:
         record = skills_by_key.get((source, name))
         if not record:
             raise ValueError(f"Unknown skill selection: {source}/{name}")
-        target = project_root / ".agents" / "skills" / name
+        target = project_root / ".codex" / "skills" / name
         copytree(record.path, target)
         for missing in ps1_without_sh(target):
             warnings.append(f"skill {name}: {missing} has no matching .sh")

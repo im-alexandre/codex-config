@@ -15,51 +15,6 @@
 - If you disagree, including when it is only a strong intuition, push back clearly and respectfully.
 - Never say "You are absolutely right" or any equivalent phrase. This level of deference is insulting to the user.
 
-## Precedence
-
-- Project-level and directory-level `AGENTS.md` files may add stricter project-specific rules.
-- Project-level rules must not weaken global safety, MCP, or cleanup rules.
-- If rules conflict, follow the most specific rule that does not weaken global safety requirements.
-
-## File Encoding
-
-- When writing files, use UTF-8 encoding.
-
-## Tool Permissions
-
-- Do not set `sandbox_permissions` on tool calls when approval policy is `never`; those calls will be rejected. Run permitted commands directly within the active sandbox policy.
-
-## DOCX Revision And Comment Authors
-
-- For any reading, inspection, editing, rewriting, validation, synchronization, revision, comment, or other operation that touches a `.docx`, use the `docx-utils` skill/tooling.
-- Execute `docx-utils` through the published binary/shim by default; do not use `dotnet run --project` unless developing, debugging, or recovering from a broken/missing binary.
-- If the needed `docx-utils` capability fails, run `docx-utils --help` to review available commands, calling forms, and examples.
-- If no command exists for the needed DOCX operation, log the missing capability in the `docx-utils` skill backlog for future implementation by the skill maintainer/agent maintainer.
-- When the main thread adds a revision or comment to a `.docx` through `docx-utils`, it must omit `--author`; `docx-utils` automatically chooses the next available author in the document.
-- Subagents that add revisions or comments to a `.docx` must pass `--author` explicitly with the assigned subagent name.
-
-## Codex project initialization
-
-When I ask to initialize/start/bootstrap a project, do this before project work:
-
-1. Run:
-
-`powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\scripts\bootstrap-codex-project.ps1" -ProjectPath "<current working directory>"`
-
-2. Show available MCP presets from `~/.codex/presets/mcp`.
-3. Ask which presets should be enabled.
-4. Generate or update the project-local `.codex/config.toml`.
-5. Keep global `~/.codex/config.toml` clean.
-6. Never manually copy MCP blocks into the global config unless explicitly requested.
-
-## Web-Dev Parallel Agent Worktrees
-
-- When the web-dev flow, `$implement-tdd`, or any web-dev plugin orchestration dispatches write-capable agents in parallel, each agent must work in its own git worktree and task branch.
-- Before dispatch, identify the reference branch explicitly and pass each agent its assigned worktree path, task branch, and reference branch.
-- Agents must edit, test, and write their result files only inside their assigned worktree.
-- After parallel agents finish, integrate their work strictly sequentially: reconcile one worktree with the current reference branch, resolve conflicts, rerun validation, merge it into the reference branch, then move to the next worktree.
-- Never resolve conflicts or merge multiple parallel worktrees at the same time. If the reference branch advances after one merge, each later worktree must reconcile against the updated reference branch before merging.
-
 ## Output Policy
 
 - Keep final responses concise.
@@ -69,3 +24,78 @@ When I ask to initialize/start/bootstrap a project, do this before project work:
   - validation/tests;
   - pending risks or next action.
 - Avoid long explanations unless requested.
+
+## Reuse-First / No-Reimplementation Policy
+
+When the task involves a library, framework, SDK, CLI, or existing project abstraction, the implementation must reuse that abstraction directly.
+
+Do not reimplement behavior that is already provided by:
+
+- installed dependencies;
+- official framework/library APIs;
+- existing project modules, services, adapters, helpers, or utilities.
+
+The task is to integrate, configure, wrap, or call the existing abstraction — not to recreate it.
+
+Before editing files, identify:
+
+1. the existing abstraction/library/module to reuse;
+2. the expected import(s);
+3. the project files that should call it;
+4. what must not be reimplemented.
+
+If custom code is necessary, keep it as thin glue code only.
+
+Custom implementations are forbidden unless the agent explicitly documents:
+
+1. which existing abstraction was considered;
+2. why it is insufficient;
+3. why the custom code is unavoidable;
+4. how the implementation avoids duplicating library behavior.
+
+Examples:
+
+- Use `langchain_postgres.PGVector`, `PGVectorStore`, or `PGEngine` instead of manually implementing pgvector queries.
+- Use LangChain vector store APIs instead of custom similarity SQL.
+- Use Django ORM, DRF serializers, and framework auth/session primitives instead of custom equivalents.
+- Use PyMuPDF, rispy, or existing parsers/loaders instead of custom parsers unless explicitly requested.
+
+Reject and refactor any implementation that:
+
+- writes manual vector similarity SQL when LangChain/Postgres abstractions are available;
+- creates a custom vector store/repository duplicating PGVector or PGVectorStore;
+- creates custom embedding persistence logic already handled by the library;
+- creates wrappers that merely rename an existing library call without project-specific value.
+
+<!-- context7 -->
+
+Use the `ctx7` CLI to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
+
+Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+
+## Steps
+
+1. Resolve library: `npx ctx7@latest library <name> "<user's question>"` — use the official library name with proper punctuation (e.g., "Next.js" not "nextjs", "Customer.io" not "customerio", "Three.js" not "threejs")
+2. Pick the best match (ID format: `/org/project`) by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). If results don't look right, try alternate names or queries (e.g., "next.js" not "nextjs", or rephrase the question)
+3. Fetch docs: `npx ctx7@latest docs <libraryId> "<user's question>"`
+4. Answer using the fetched documentation
+
+You MUST call `library` first to get a valid ID unless the user provides one directly in `/org/project` format. Use the user's full question as the query -- specific and detailed queries return better results than vague single words. Do not run more than 3 commands per question. Do not include sensitive information (API keys, passwords, credentials) in queries.
+
+For version-specific docs, use `/org/project/version` from the `library` output (e.g., `/vercel/next.js/v14.3.0`).
+
+If a command fails with a quota error, inform the user and suggest `npx ctx7@latest login` or setting `CONTEXT7_API_KEY` env var for higher limits. Do not silently fall back to training data.
+Run Context7 CLI requests outside Codex's default sandbox. If a Context7 CLI command fails with DNS or network errors such as ENOTFOUND, host resolution failures, or fetch failed, rerun it outside the sandbox instead of retrying inside the sandbox.
+
+## Context7 Usage Requirement
+
+When Context7 is used, the fetched documentation must drive the implementation.
+
+After fetching docs:
+
+- prefer the official documented API exactly as shown;
+- use documented imports and constructors when applicable;
+- do not replace the documented API with a manual implementation;
+- do not infer missing low-level behavior if the library already exposes a high-level abstraction;
+- if the documented API does not support the requested behavior, document the gap before writing custom code.
+<!-- context7 -->

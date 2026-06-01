@@ -13,6 +13,14 @@ Default rule:
 
 ## Specialized implementation agents
 
+Hard routing rule:
+
+- Specialist agents are not reusable generalists. If the assigned task is outside the agent's named stack, the agent must return `blocked` and name the correct specialist or the missing specialist to create.
+- Every implementation dispatch must include stack, mandatory skills/instructions, allowed write scope, red command, green command, and integration command.
+- The agent must load its mandatory skills/instructions before planning or editing. If a required skill cannot be loaded, it must stop instead of improvising.
+- Mandatory skills are active harnesses, not context decoration. Each specialist must create `.codex/agent-events/skill-harness/<task-id>-<agent-name>.md` before tests, edits, or review findings, using structured `task:`, `agent:`, `loaded:`, `rules:`, and `constraints:` fields; final results must cite that evidence. If context is compacted or the exact skill text is no longer available, reload the mandatory skills before continuing.
+- Do not use `worker` or `default` for coding work when a stack-specific agent exists. Use them only for tiny stack-neutral tasks, exploration, shell/file chores, or as a temporary fallback with the complete TDD contract copied into the prompt.
+
 - `dotnet-docx-maintainer.toml`
   - .NET/Open XML implementation and review for the `docx-utils` skill
   - strict xUnit red-green-refactor workflow around CLI behavior and plan contracts

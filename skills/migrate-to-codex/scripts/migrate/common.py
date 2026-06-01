@@ -26,7 +26,7 @@ from utils.util import (
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?(.*)\Z", re.S)
 CODEX_CONFIG_PATH = Path(".codex") / "config.toml"
 CODEX_AGENTS_ROOT = Path(".codex") / "agents"
-CODEX_SKILLS_ROOT = Path(".agents") / "skills"
+CODEX_SKILLS_ROOT = Path(".codex") / "skills"
 SUMMARY_LABELS = {
     "mcp_servers": "mcp servers",
 }

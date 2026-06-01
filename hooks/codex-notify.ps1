@@ -53,29 +53,46 @@ try {
     $cwd = (Get-Location).Path
   }
 
-  $project = Split-Path $cwd -Leaf
+  $focusScript = Join-Path $env:USERPROFILE ".codex\scripts\codex-terminal\Focus-CodexTab.ps1"
+  $commonScript = Join-Path $env:USERPROFILE ".codex\scripts\codex-terminal\CodexTerminal.Common.ps1"
+  $projectInfo = $null
+  $project = $null
+
+  if (Test-Path -LiteralPath $commonScript) {
+    try {
+      . $commonScript
+      $projectInfo = Get-CodexProjectInfo -Path $cwd
+      $project = [string]$projectInfo.ProjectName
+    } catch {
+      Write-NotifyLog "falha ao resolver projeto cwd=${cwd}: $($_.Exception.Message)"
+    }
+  }
+
+  if (-not $project) {
+    $project = Split-Path $cwd -Leaf
+  }
+
   if (-not $project) {
     $project = $cwd
   }
 
+  $title = $project
+
   switch ($hook) {
     "Stop" {
-      $title = "Codex CLI terminou"
       $body = if ($msg) {
-        "$project - $($msg.Substring(0, [Math]::Min(180, $msg.Length)))"
+        "Codex CLI terminou - $($msg.Substring(0, [Math]::Min(180, $msg.Length)))"
       } else {
-        "$project - resposta pronta"
+        "Codex CLI terminou - resposta pronta"
       }
     }
 
     "PermissionRequest" {
-      $title = "Codex CLI precisa de aprovacao"
-      $body = "$project - aguardando sua confirmacao"
+      $body = "Codex CLI precisa de aprovacao"
     }
 
     default {
-      $title = "Codex CLI"
-      $body = "$project - evento: $hook"
+      $body = "Codex CLI - evento: $hook"
     }
   }
 
@@ -83,13 +100,13 @@ try {
 
   Import-Module BurntToast -ErrorAction Stop
 
-  $focusScript = Join-Path $env:USERPROFILE ".codex\scripts\codex-terminal\Focus-CodexTab.ps1"
-  $commonScript = Join-Path $env:USERPROFILE ".codex\scripts\codex-terminal\CodexTerminal.Common.ps1"
-
   if ($sessionId -and (Test-Path -LiteralPath $commonScript)) {
     try {
-      . $commonScript
-      $projectInfo = Get-CodexProjectInfo -Path $cwd
+      if (-not $projectInfo) {
+        . $commonScript
+        $projectInfo = Get-CodexProjectInfo -Path $cwd
+      }
+
       $windowName = if ($env:CODEX_TERMINAL_WINDOW_NAME) { $env:CODEX_TERMINAL_WINDOW_NAME } else { "codex" }
       $tabTitle = if ($env:CODEX_TERMINAL_TAB_TITLE) { $env:CODEX_TERMINAL_TAB_TITLE } else { "codex:${windowName}:$($projectInfo.ProjectName)" }
       $launcherSessionId = $env:CODEX_TERMINAL_LAUNCH_ID
