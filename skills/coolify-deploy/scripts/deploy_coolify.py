@@ -40,12 +40,12 @@ def parse_env(values: list[str]) -> dict[str, str]:
 
 
 class Coolify:
-    def __init__(self, base_url: str, api_key: str) -> None:
+    def __init__(self, base_url: str, access_token: str) -> None:
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
         self.session.headers.update(
             {
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": f"Bearer {access_token}",
                 "Accept": "application/json",
             }
         )
@@ -127,7 +127,7 @@ def has_manual_routing_labels(value: Any) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--coolify-url", default=os.environ.get("COOLIFY_URL", "https://coolify.drg.ink"))
+    parser.add_argument("--coolify-url", default=os.environ.get("COOLIFY_BASE_URL"))
     parser.add_argument("--project-name", required=True)
     parser.add_argument("--environment-name", required=True)
     parser.add_argument("--repository", required=True)
@@ -145,11 +145,13 @@ def main() -> int:
     parser.add_argument("--keep-auto-production-environment", action="store_true")
     args = parser.parse_args()
 
-    api_key = os.environ.get("COOLIFY_API_KEY")
-    if not api_key:
-        raise SystemExit("COOLIFY_API_KEY is required in the environment.")
+    access_token = os.environ.get("COOLIFY_ACCESS_TOKEN")
+    if not access_token:
+        raise SystemExit("COOLIFY_ACCESS_TOKEN is required in the environment.")
+    if not args.coolify_url:
+        raise SystemExit("COOLIFY_BASE_URL is required in the environment or --coolify-url must be provided.")
 
-    client = Coolify(args.coolify_url, api_key)
+    client = Coolify(args.coolify_url, access_token)
     domain_host = requests.utils.urlparse(args.domain).hostname or args.domain.replace("https://", "").replace("http://", "")
 
     version = client.get("/api/v1/version")

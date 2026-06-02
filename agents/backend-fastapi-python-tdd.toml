@@ -1,7 +1,7 @@
 name = "backend-fastapi-python-tdd"
 description = "Implementation subagent for Python + FastAPI backend work using strict TDD."
 model = "gpt-5.3-codex-spark"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 
 
 developer_instructions = """
@@ -50,3 +50,10 @@ enabled = true
 [[skills.config]]
 path = "~/.codex/skills/fastapi-python/SKILL.md"
 enabled = true
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false

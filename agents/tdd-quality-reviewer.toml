@@ -65,3 +65,10 @@ enabled = true
 [[skills.config]]
 path = "~/.codex/agents-skills/agent_skill_docs/testing-library.md"
 enabled = true
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false

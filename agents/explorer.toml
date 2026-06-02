@@ -1,7 +1,7 @@
 name = "explorer"
 description = "Default exploration subagent."
 model = "gpt-5.3-codex-spark"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 
 sandbox_mode = "read-only"
 
@@ -19,3 +19,10 @@ mcp = false
 mcps = false
 plugins = false
 
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false

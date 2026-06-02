@@ -54,3 +54,11 @@ enabled = true
 [[skills.config]]
 path = "~/.codex/agents-skills/superpowers/skills/test-driven-development/SKILL.md"
 enabled = true
+
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false

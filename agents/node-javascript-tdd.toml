@@ -1,7 +1,7 @@
 name = "node-javascript-tdd"
 description = "Implementation subagent for Node.js and modern JavaScript/TypeScript work using strict TDD."
 model = "gpt-5.3-codex-spark"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 
 
 developer_instructions = """
@@ -52,3 +52,10 @@ enabled = true
 [[skills.config]]
 path = "~/.codex/agents-skills/javascript-testing-patterns/SKILL.md"
 enabled = true
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false

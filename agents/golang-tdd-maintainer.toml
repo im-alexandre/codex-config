@@ -1,7 +1,7 @@
 name = "golang-tdd-maintainer"
 description = "Implementation subagent for Go backend, CLI, daemon, IPC, and TUI work using strict TDD and idiomatic Go."
 model = "gpt-5.3-codex-spark"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 
 
 developer_instructions = """
@@ -65,3 +65,10 @@ enabled = true
 [[skills.config]]
 path = "~/.codex/skills/golang-testing/SKILL.md"
 enabled = true
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false

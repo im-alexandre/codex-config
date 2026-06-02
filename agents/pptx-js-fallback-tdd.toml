@@ -1,7 +1,7 @@
 name = "pptx-js-fallback-tdd"
 description = "Implementation subagent for the JavaScript/PptxGenJS fallback path in pptx-utils, using strict TDD and Node.js discipline."
 model = "gpt-5.3-codex-spark"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 
 
 developer_instructions = """
@@ -58,4 +58,11 @@ enabled = true
 
 [[skills.config]]
 path = "~/.codex/skills/pptx/pptxgenjs.md"
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false
 enabled = true

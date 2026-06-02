@@ -1,7 +1,7 @@
 name = "frontend-react-vite-tdd"
 description = "Implementation subagent for React + Vite frontend work using strict TDD."
 model = "gpt-5.3-codex-spark"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 
 
 developer_instructions = """
@@ -54,3 +54,10 @@ enabled = true
 [[skills.config]]
 path = "~/.codex/agents-skills/agent_skill_docs/testing-library.md"
 enabled = true
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false

@@ -1,7 +1,7 @@
 name = "dotnet-docx-maintainer"
 description = "Implementation and review subagent for the docx-utils .NET/Open XML source using TDD, xUnit, CLI contracts, and the published binary discipline."
 model = "gpt-5.3-codex-spark"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 
 
 developer_instructions = """
@@ -61,3 +61,10 @@ enabled = true
 [[skills.config]]
 path = "~/.codex/skills/docx-utils/agents/mantenedor-dotnet-docx.md"
 enabled = true
+
+[mcp_servers.node_repl]
+mcp = false
+
+
+[mcp_servers.coolify]
+mcp = false
