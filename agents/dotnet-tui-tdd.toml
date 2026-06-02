@@ -77,8 +77,7 @@ path = "~/.codex/agents-skills/dotnet-terminal-gui/SKILL.md"
 enabled = true
 
 [mcp_servers.node_repl]
-mcp = false
-
+enabled = false
 
 [mcp_servers.coolify]
-mcp = false
+enabled = false

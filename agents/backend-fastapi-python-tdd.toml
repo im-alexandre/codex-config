@@ -51,9 +51,9 @@ enabled = true
 path = "~/.codex/skills/fastapi-python/SKILL.md"
 enabled = true
 
-[mcp_servers.node_repl]
-mcp = false
 
+[mcp_servers.node_repl]
+enabled = false
 
 [mcp_servers.coolify]
-mcp = false
+enabled = false

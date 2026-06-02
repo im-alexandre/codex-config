@@ -42,7 +42,6 @@ Review priorities:
 fast_mode = false
 memories = false
 apps = false
-mcp = false
 mcps = false
 plugins = false
 
@@ -67,8 +66,8 @@ path = "~/.codex/agents-skills/agent_skill_docs/testing-library.md"
 enabled = true
 
 [mcp_servers.node_repl]
-mcp = false
+enabled = false
 
 
 [mcp_servers.coolify]
-mcp = false
+enabled = false

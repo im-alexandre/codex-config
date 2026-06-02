@@ -54,10 +54,8 @@ enabled = true
 path = "~/.codex/agents-skills/agent_skill_docs/senior-django-developer.md"
 enabled = true
 
-
 [mcp_servers.node_repl]
-mcp = false
-
+enabled = false
 
 [mcp_servers.coolify]
-mcp = false
+enabled = false

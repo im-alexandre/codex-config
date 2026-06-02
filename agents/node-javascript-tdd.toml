@@ -54,8 +54,8 @@ path = "~/.codex/agents-skills/javascript-testing-patterns/SKILL.md"
 enabled = true
 
 [mcp_servers.node_repl]
-mcp = false
+enabled = false
 
 
 [mcp_servers.coolify]
-mcp = false
+enabled = false

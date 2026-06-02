@@ -15,14 +15,12 @@ Do not edit files.
 fast_mode = false
 memories = false
 apps = false
-mcp = false
-mcps = false
 plugins = false
 
 
 [mcp_servers.node_repl]
-mcp = false
+enabled = false
 
 
 [mcp_servers.coolify]
-mcp = false
+enabled = false
