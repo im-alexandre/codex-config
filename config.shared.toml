@@ -17,28 +17,12 @@ hooks = true
   max_threads = 10
   max_depth = 2
 
-[[hooks.SessionStart]]
-matcher = "startup|resume|clear"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = "python C:/Users/imale/.codex/hooks/force_subagent_defaults.py"
-timeout = 10
-statusMessage = "Forcing subagent defaults"
-
 [[hooks.Stop]]
 [[hooks.Stop.hooks]]
 type = "command"
 command = "python C:/Users/imale/.codex/hooks/skill-harness-guard.py"
 timeout = 10
 statusMessage = "Verificando skill harness"
-
-[[hooks.Stop]]
-[[hooks.Stop.hooks]]
-type = "command"
-command = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hooks\codex-notify.ps1"'
-timeout = 10
-statusMessage = "Enviando notificação"
 
 [[hooks.PreToolUse]]
 matcher = "^Bash$|^apply_patch$|^Edit$|^Write$"
@@ -54,14 +38,6 @@ type = "command"
 command = "python C:/Users/imale/.codex/hooks/skill-harness-guard.py"
 timeout = 5
 statusMessage = "Ativando skill harness"
-
-[[hooks.PermissionRequest]]
-matcher = "*"
-[[hooks.PermissionRequest.hooks]]
-type = "command"
-command = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hooks\codex-notify.ps1"'
-timeout = 10
-statusMessage = "Enviando notificação"
 
 [windows]
 sandbox = "elevated"
